@@ -75,8 +75,8 @@ def new_puzzle():
                 # Count white moves (every other move starting from index 0)
                 player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             else:
-                # Count black moves (every other move starting from index 1)
-                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 1])
+                # Count black moves (all moves in solution for black puzzles)
+                player_moves_count = len(solution_moves)
             
             return jsonify({
                 'success': True,
@@ -109,7 +109,7 @@ def new_puzzle():
             if player_color == "white":
                 player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             else:
-                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 1])
+                player_moves_count = len(solution_moves)
             
             return jsonify({
                 'success': True,
@@ -180,6 +180,7 @@ def make_move():
                     'message': 'Puzzle solved! 🎉',
                     'type': 'success',
                     'puzzle_complete': True,
+                    'moves_required': 0,
                     'consecutive_wins': game_state['consecutive_wins']
                 })
             else:
@@ -198,8 +199,8 @@ def make_move():
                             # White player, so Black responds
                             response_color = "Black"
                         else:
-                            # Count remaining black moves (every other move starting from current index + 1)
-                            remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1])
+                            # Count remaining black moves (all remaining moves for black puzzles)
+                            remaining_player_moves = len(puzzle.solution_moves[puzzle.current_move_index:])
                             # Black player, so White responds
                             response_color = "White"
                         
@@ -225,8 +226,8 @@ def make_move():
                         # Count remaining white moves (every other move starting from current index)
                         remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
                     else:
-                        # Count remaining black moves (every other move starting from current index + 1)
-                        remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1])
+                        # Count remaining black moves (all remaining moves for black puzzles)
+                        remaining_player_moves = len(puzzle.solution_moves[puzzle.current_move_index:])
                     
                     return jsonify({
                         'success': True,
@@ -265,6 +266,37 @@ def reset_game():
     game_state['total_puzzles_solved'] = 0
     game_state['current_puzzle'] = None
     return jsonify({'success': True, 'message': 'Game reset!'})
+
+@app.route('/api/get-hint', methods=['POST'])
+def get_hint():
+    """Get a hint for the current puzzle."""
+    try:
+        if not game_state['current_puzzle']:
+            return jsonify({'success': False, 'message': 'No active puzzle'}), 400
+        
+        puzzle = game_state['current_puzzle']
+        
+        # Check if puzzle is already complete
+        if puzzle.is_complete():
+            return jsonify({'success': False, 'message': 'Puzzle already complete!'}), 400
+        
+        # Get the next move that should be made
+        if puzzle.current_move_index < len(puzzle.solution_moves):
+            next_move = puzzle.solution_moves[puzzle.current_move_index]
+            
+            # Extract the source square (first 2 characters of the move)
+            source_square = next_move[:2]
+            
+            return jsonify({
+                'success': True,
+                'hint_square': source_square,
+                'message': f'Try moving the piece on {source_square.upper()}'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'No more moves available'}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def convert_moves_for_flipped_board(moves):
     """Convert UCI moves from normal board coordinates to flipped board coordinates."""

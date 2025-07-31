@@ -8,6 +8,7 @@ A fun and interactive web-based chess puzzle game that challenges players with r
 - ⚡ **Instant Feedback** - Immediate rewards and punishments
 - 🏆 **Progress Tracking** - Consecutive wins counter
 - 🎉 **Celebration System** - Fun messages and animations
+- 💡 **Hint System** - Get help with piece highlighting and guidance
 - 📱 **Responsive Design** - Works on desktop and mobile
 - ♟️ **High-Quality Chess Pieces** - Wikipedia-style chess piece images
 
@@ -60,14 +61,16 @@ chess-puzzle/
 ## How to Play
 1. Click "New Puzzle" to start a challenge
 2. Make the best moves to solve the puzzle
-3. Wrong moves reset your consecutive wins
-4. Solve puzzles to build your streak!
-5. Enjoy the celebration messages! 🎉
+3. Use the "💡 Hint" button if you need help - it will highlight the piece to move
+4. Wrong moves reset your consecutive wins
+5. Solve puzzles to build your streak!
+6. Enjoy the celebration messages! 🎉
 
 ## API Endpoints
 - `GET /` - Main game page
 - `POST /api/new-puzzle` - Generate new puzzle
 - `POST /api/make-move` - Process player move
+- `POST /api/get-hint` - Get hint for current puzzle
 - `GET /api/game-stats` - Get game statistics
 - `POST /api/reset-game` - Reset game state
 

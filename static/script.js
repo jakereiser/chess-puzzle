@@ -88,6 +88,10 @@ function setupEventListeners() {
     $('#reset-game-btn').click(function() {
         resetGame();
     });
+    
+    $('#hint-btn').click(function() {
+        getHint();
+    });
 }
 
 function loadNewPuzzle() {
@@ -129,11 +133,15 @@ function loadNewPuzzle() {
                     }
                 }, 50);
                 
-                // Update UI
-                $('#puzzle-description').text(response.description);
-                $('#moves-required').text(`Moves required: ${response.moves_required}`);
-                
-                showFeedback('Puzzle loaded! Find the best moves! 🎯', 'success');
+                                    // Update UI
+                    $('#puzzle-description').text(response.description);
+                    $('#moves-required').text(`Moves required: ${response.moves_required}`);
+                    
+                    // Clear any hint highlighting and persistent messages
+                    clearHintHighlight();
+                    $('#feedback-message').removeClass('show');
+                    
+                    showFeedback('Puzzle loaded! Find the best moves! 🎯', 'success');
             } else {
                 showFeedback('Failed to load puzzle. Try again!', 'error');
             }
@@ -237,6 +245,9 @@ function makeMove(moveUCI) {
                     showFeedback(response.message, 'success');
                     updateStats();
                     
+                    // Update moves required to 0 when puzzle is complete
+                    $('#moves-required').text(`Moves required: ${response.moves_required || 0}`);
+                    
                     // Auto-load new puzzle after a delay
                     setTimeout(function() {
                         loadNewPuzzle();
@@ -245,6 +256,9 @@ function makeMove(moveUCI) {
                     // Good move, continue
                     showFeedback(response.message, 'success');
                     $('#moves-required').text(`Moves required: ${response.moves_required}`);
+                    
+                    // Clear any hint highlighting when a move is made
+                    clearHintHighlight();
                     
                     // Update board position if black made a move
                     if (response.black_move && response.current_fen) {
@@ -267,6 +281,9 @@ function makeMove(moveUCI) {
                 // Wrong move
                 showFeedback(response.message, 'error');
                 updateStats();
+                
+                // Clear any hint highlighting when a wrong move is made
+                clearHintHighlight();
                 
                 // Reset the board to the original puzzle position
                 if (response.original_fen) {
@@ -338,16 +355,18 @@ function makeMove(moveUCI) {
     });
 }
 
-function showFeedback(message, type) {
+function showFeedback(message, type, persistent = false) {
     const feedbackElement = $('#feedback-message');
     feedbackElement.text(message);
     feedbackElement.removeClass('success error show');
     feedbackElement.addClass(type + ' show');
     
-    // Auto-hide after 3 seconds
-    setTimeout(function() {
-        feedbackElement.removeClass('show');
-    }, 3000);
+    // Only auto-hide if not persistent
+    if (!persistent) {
+        setTimeout(function() {
+            feedbackElement.removeClass('show');
+        }, 3000);
+    }
 }
 
 function loadGameStats() {
@@ -386,6 +405,10 @@ function resetGame() {
                 // Reset coordinate labels to default
                 resetCoordinateLabels();
                 
+                // Clear any hint highlighting and persistent messages
+                clearHintHighlight();
+                $('#feedback-message').removeClass('show');
+                
                 $('#puzzle-description').text('Ready to start?');
                 $('#moves-required').text('Click "New Puzzle" to begin!');
             }
@@ -394,6 +417,49 @@ function resetGame() {
             showFeedback('Error resetting game. Please try again.', 'error');
         }
     });
+}
+
+function getHint() {
+    if (!currentPuzzle) {
+        showFeedback('No active puzzle. Load a puzzle first!', 'error');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/get-hint',
+        method: 'POST',
+        success: function(response) {
+            if (response.success) {
+                showFeedback(response.message, 'success', true); // Persistent message
+                highlightSquare(response.hint_square);
+            } else {
+                showFeedback(response.message, 'error');
+            }
+        },
+        error: function() {
+            showFeedback('Error getting hint. Please try again.', 'error');
+        }
+    });
+}
+
+function highlightSquare(square) {
+    // Clear any existing highlights
+    clearHintHighlight();
+    
+    // Add highlight class to the square
+    const squareElement = $(`.square-${square}`);
+    if (squareElement.length) {
+        squareElement.addClass('hint-highlight');
+        
+        // Remove highlight after 3 seconds
+        setTimeout(function() {
+            clearHintHighlight();
+        }, 3000);
+    }
+}
+
+function clearHintHighlight() {
+    $('.hint-highlight').removeClass('hint-highlight');
 }
 
 // Add some fun celebration messages
