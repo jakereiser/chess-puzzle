@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Puzzle Challenge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♔ Chess Puzzle Challenge ♔</h1>
+            <p class="subtitle">Test your chess skills with fun puzzles!</p>
+        </header>
+
+        <div class="game-stats">
+            <div class="stat">
+                <span class="stat-label">Consecutive Wins:</span>
+                <span class="stat-value" id="consecutive-wins">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total Solved:</span>
+                <span class="stat-value" id="total-solved">0</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="puzzle-info">
+                <h2 id="puzzle-description">Chess Board Ready</h2>
+                <p id="moves-required">Click "New Puzzle" to load a challenging position!</p>
+            </div>
+
+            <div class="chess-board-container">
+                <div id="chessboard" class="chess-board">
+                    <p style="text-align: center; padding: 50px;">Chess Board Placeholder</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="new-puzzle-btn" class="btn btn-primary">New Puzzle</button>
+                <button id="reset-game-btn" class="btn btn-secondary">Reset Game</button>
+            </div>
+
+            <div class="feedback" id="feedback">
+                <div class="feedback-message" id="feedback-message"></div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <ul>
+                <li>Click "New Puzzle" to start a new challenge</li>
+                <li>Make the best moves to solve the puzzle</li>
+                <li>Wrong moves will reset your consecutive wins</li>
+                <li>Solve puzzles to build your streak!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Simple test script
+        $(document).ready(function() {
+            console.log('Page loaded successfully!');
+            $('#new-puzzle-btn').click(function() {
+                alert('New Puzzle button clicked!');
+            });
+        });
+    </script>
+</body>
+</html> 
