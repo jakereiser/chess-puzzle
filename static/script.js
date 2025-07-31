@@ -4,16 +4,52 @@ let board = null;
 let game = null;
 let currentPuzzle = null;
 
+// Global error handler to prevent uncaught exceptions
+window.addEventListener('error', function(e) {
+    // Filter out SES-related warnings from browser extensions
+    if (e.message && e.message.includes('SES') || e.message.includes('lockdown')) {
+        return false; // Silently ignore SES warnings
+    }
+    console.warn('Caught error:', e.message);
+    return false; // Prevent default error handling
+});
+
+// Handle SES-related console warnings
+const originalWarn = console.warn;
+console.warn = function(...args) {
+    // Filter out SES warnings from browser extensions
+    const message = args.join(' ');
+    if (message.includes('SES') || message.includes('dateTaming') || message.includes('mathTaming') || message.includes('lockdown')) {
+        return; // Don't log SES warnings
+    }
+    originalWarn.apply(console, args);
+};
+
+// Also handle console.error for SES-related messages
+const originalError = console.error;
+console.error = function(...args) {
+    // Filter out SES errors from browser extensions
+    const message = args.join(' ');
+    if (message.includes('SES') || message.includes('lockdown') || message.includes('SES_UNCAUGHT_EXCEPTION')) {
+        return; // Don't log SES errors
+    }
+    originalError.apply(console, args);
+};
+
 // Initialize the application
 $(document).ready(function() {
-    initializeChessBoard();
-    loadGameStats();
-    setupEventListeners();
-    
-    // Handle window resize to keep board contained
-    $(window).resize(function() {
-        // Chessboard2 handles resizing automatically
-    });
+    try {
+        initializeChessBoard();
+        loadGameStats();
+        setupEventListeners();
+        
+        // Handle window resize to keep board contained
+        $(window).resize(function() {
+            // Chessboard2 handles resizing automatically
+        });
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
 });
 
 function initializeChessBoard() {
@@ -70,6 +106,17 @@ function loadNewPuzzle() {
                 // Update the board position to the scrambled puzzle
                 game = new Chess(response.fen);
                 board.setPosition(response.fen);
+                
+                // Set board orientation based on player color
+                if (response.player_color === 'black') {
+                    board.config({ orientation: 'black' });
+                    // Flip coordinate labels for black orientation
+                    flipCoordinateLabels();
+                } else {
+                    board.config({ orientation: 'white' });
+                    // Reset coordinate labels for white orientation
+                    resetCoordinateLabels();
+                }
                 
                 // Enable dragging for the puzzle
                 console.log('Enabling dragging for puzzle');
@@ -156,13 +203,20 @@ function onDrop(data) {
     console.log('Legal move made:', move);
     
     // Convert to UCI notation for API
-    let moveUCI = data.source + data.target;
+    // Keep coordinates consistent - no conversion needed since backend handles coordinate mapping
+    let source = data.source;
+    let target = data.target;
+    
+    // For debugging, log the coordinates being sent
+    console.log('Coordinates being sent to server:', { source: source, target: target });
+    
+    let moveUCI = source + target;
     if (move.promotion) {
         moveUCI += move.promotion;
     }
     
     console.log('Sending move to server:', moveUCI);
-    console.log('Move details:', { source: data.source, target: data.target, moveUCI: moveUCI });
+    console.log('Move details:', { source: source, target: target, moveUCI: moveUCI });
     
     // Send move to server for puzzle validation
     makeMove(moveUCI);
@@ -323,8 +377,14 @@ function resetGame() {
                 // Reset the board to standard starting position
                 game = new Chess();
                 board.setPosition('start');
-                board.config({ draggable: false }); // Disable dragging
+                board.config({ 
+                    draggable: false, // Disable dragging
+                    orientation: 'white' // Reset to white orientation
+                });
                 currentPuzzle = null;
+                
+                // Reset coordinate labels to default
+                resetCoordinateLabels();
                 
                 $('#puzzle-description').text('Ready to start?');
                 $('#moves-required').text('Click "New Puzzle" to begin!');
@@ -387,4 +447,38 @@ function getRandomMessage(type) {
     } else {
         return encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
     }
+}
+
+// Coordinate label functions
+function flipCoordinateLabels() {
+    // Flip file labels (H-A from left to right for black perspective)
+    const fileLabels = document.querySelectorAll('.coordinate-bottom span');
+    const fileOrder = ['H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
+    fileLabels.forEach((span, index) => {
+        span.textContent = fileOrder[index];
+    });
+    
+    // Flip rank labels (1-8 from top to bottom for black perspective)
+    const rankLabels = document.querySelectorAll('.coordinate-left span');
+    const rankOrder = ['1', '2', '3', '4', '5', '6', '7', '8'];
+    rankLabels.forEach((span, index) => {
+        span.textContent = rankOrder[index];
+    });
+    
+    console.log('Coordinate labels flipped for black puzzle');
+}
+
+function resetCoordinateLabels() {
+    // Reset to standard coordinate labels
+    const fileLabels = document.querySelectorAll('.coordinate-bottom span');
+    const fileOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    fileLabels.forEach((span, index) => {
+        span.textContent = fileOrder[index];
+    });
+
+    const rankLabels = document.querySelectorAll('.coordinate-left span');
+    const rankOrder = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    rankLabels.forEach((span, index) => {
+        span.textContent = rankOrder[index];
+    });
 } 
