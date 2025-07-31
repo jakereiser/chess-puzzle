@@ -47,23 +47,41 @@ def test():
 def new_puzzle():
     """Generate a new puzzle for the player."""
     try:
-        # Create a more interesting scrambled puzzle position
-        # This is a sample position where white can gain advantage
-        initial_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1"
-        solution_moves = ["d2d4", "e5d4", "c4f7"]  # 3-move tactical puzzle
-        description = "White to move and win material"
+        # Randomly choose whether user plays white or black
+        import random
+        user_plays_white = random.choice([True, False])
+        
+        if user_plays_white:
+            # White to move puzzle
+            initial_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1"
+            solution_moves = ["d2d4", "e5d4", "c4f7"]  # 3-move tactical puzzle
+            description = "White to move and win material"
+            player_color = "white"
+        else:
+            # Black to move puzzle
+            initial_fen = "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+            solution_moves = ["e5e4", "d2d4", "e4d4", "c2c4"]  # Black plays e5, White responds d4, Black captures, White plays c4
+            description = "Black to move and gain advantage"
+            player_color = "black"
         
         puzzle = ChessPuzzle(initial_fen, solution_moves, description)
         game_state['current_puzzle'] = puzzle
+        game_state['player_color'] = player_color
         
-        # Count only white moves (every other move starting from index 0)
-        white_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
+        # Count moves for the player's color
+        if player_color == "white":
+            # Count white moves (every other move starting from index 0)
+            player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
+        else:
+            # Count black moves (every other move starting from index 1)
+            player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 1])
         
         return jsonify({
             'success': True,
             'fen': initial_fen,
             'description': description,
-            'moves_required': white_moves_count
+            'moves_required': player_moves_count,
+            'player_color': player_color
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -129,15 +147,21 @@ def make_move():
                     puzzle.current_move_index += 1
                     
                     if success:
-                        # Calculate remaining white moves (every other move starting from current index)
-                        remaining_white_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                        # Calculate remaining moves for the player's color
+                        player_color = game_state.get('player_color', 'white')
+                        if player_color == "white":
+                            # Count remaining white moves (every other move starting from current index)
+                            remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                        else:
+                            # Count remaining black moves (every other move starting from current index + 1)
+                            remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1])
                         
                         return jsonify({
                             'success': True,
                             'message': f'Good move! Black responds with {black_move}',
                             'type': 'success',
                             'puzzle_complete': False,
-                            'moves_required': remaining_white_moves,
+                            'moves_required': remaining_player_moves,
                             'black_move': black_move,
                             'current_fen': puzzle.board.get_fen()
                         })
@@ -148,15 +172,21 @@ def make_move():
                             'type': 'error'
                         })
                 else:
-                    # Calculate remaining white moves (every other move starting from current index)
-                    remaining_white_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                    # Calculate remaining moves for the player's color
+                    player_color = game_state.get('player_color', 'white')
+                    if player_color == "white":
+                        # Count remaining white moves (every other move starting from current index)
+                        remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                    else:
+                        # Count remaining black moves (every other move starting from current index + 1)
+                        remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1])
                     
                     return jsonify({
                         'success': True,
                         'message': 'Good move! Keep going!',
                         'type': 'success',
                         'puzzle_complete': False,
-                        'moves_required': remaining_white_moves
+                        'moves_required': remaining_player_moves
                     })
         else:
             # Wrong move - reset consecutive wins and reset puzzle board

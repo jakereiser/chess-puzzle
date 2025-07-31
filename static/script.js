@@ -63,7 +63,8 @@ function loadNewPuzzle() {
                 currentPuzzle = {
                     fen: response.fen,
                     description: response.description,
-                    movesRequired: response.moves_required
+                    movesRequired: response.moves_required,
+                    playerColor: response.player_color || 'white'
                 };
                 
                 // Update the board position to the scrambled puzzle
@@ -106,10 +107,10 @@ function onDragStart(data) {
     }
     
     // Only allow dragging pieces that belong to the current player
-    // For now, we'll assume white always moves first in puzzles
     const pieceColor = data.piece.charAt(0);
-    if (pieceColor !== 'w') {
-        console.log('Not white piece, dragging disabled');
+    const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
+    if (pieceColor !== expectedColor) {
+        console.log(`Not ${currentPuzzle.playerColor} piece, dragging disabled`);
         return false;
     }
     
