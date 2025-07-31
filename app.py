@@ -56,11 +56,14 @@ def new_puzzle():
         puzzle = ChessPuzzle(initial_fen, solution_moves, description)
         game_state['current_puzzle'] = puzzle
         
+        # Count only white moves (every other move starting from index 0)
+        white_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
+        
         return jsonify({
             'success': True,
             'fen': initial_fen,
             'description': description,
-            'moves_required': len(solution_moves)
+            'moves_required': white_moves_count
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -126,12 +129,15 @@ def make_move():
                     puzzle.current_move_index += 1
                     
                     if success:
+                        # Calculate remaining white moves (every other move starting from current index)
+                        remaining_white_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                        
                         return jsonify({
                             'success': True,
                             'message': f'Good move! Black responds with {black_move}',
                             'type': 'success',
                             'puzzle_complete': False,
-                            'moves_remaining': len(puzzle.solution_moves) - puzzle.current_move_index,
+                            'moves_required': remaining_white_moves,
                             'black_move': black_move,
                             'current_fen': puzzle.board.get_fen()
                         })
@@ -142,12 +148,15 @@ def make_move():
                             'type': 'error'
                         })
                 else:
+                    # Calculate remaining white moves (every other move starting from current index)
+                    remaining_white_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
+                    
                     return jsonify({
                         'success': True,
                         'message': 'Good move! Keep going!',
                         'type': 'success',
                         'puzzle_complete': False,
-                        'moves_remaining': len(puzzle.solution_moves) - puzzle.current_move_index
+                        'moves_required': remaining_white_moves
                     })
         else:
             # Wrong move - reset consecutive wins and reset puzzle board

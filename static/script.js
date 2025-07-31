@@ -189,7 +189,7 @@ function makeMove(moveUCI) {
                 } else {
                     // Good move, continue
                     showFeedback(response.message, 'success');
-                    $('#moves-required').text(`Moves remaining: ${response.moves_remaining}`);
+                    $('#moves-required').text(`Moves required: ${response.moves_required}`);
                     
                     // Update board position if black made a move
                     if (response.black_move && response.current_fen) {
