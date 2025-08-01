@@ -791,10 +791,10 @@ header h1 {
         order: -1; /* Move to top */
     }
     
-    /* Chess board mobile optimizations - Fill available space */
+    /* Chess board mobile optimizations - Prevent over-stretching */
     .chess-board-container {
         width: 100%;
-        max-width: 400px; /* Restore to original size */
+        max-width: 350px; /* Reduce to prevent stretching */
         margin: 0 auto;
         background: transparent;
         box-shadow: none; /* Remove shadow on mobile for cleaner look */
@@ -803,8 +803,8 @@ header h1 {
     .chess-board {
         width: 100% !important;
         height: auto !important;
-        max-width: 400px; /* Restore to original size */
-        max-height: 400px; /* Restore to original size */
+        max-width: 350px; /* Reduce to prevent stretching */
+        max-height: 350px; /* Reduce to prevent stretching */
         aspect-ratio: 1; /* Maintain square aspect ratio */
     }
     
@@ -931,12 +931,12 @@ header h1 {
     }
     
     .chess-board {
-        max-width: 350px; /* Restore original size */
-        max-height: 350px; /* Restore original size */
+        max-width: 300px; /* Further reduce for very small screens */
+        max-height: 300px; /* Further reduce for very small screens */
     }
     
     .chess-board-container {
-        max-width: 350px; /* Restore original size */
+        max-width: 300px; /* Further reduce for very small screens */
     }
     
     .btn {
