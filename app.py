@@ -67,7 +67,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = os.environ.get('APP_VERSION', '1.7.0')
+APP_VERSION = os.environ.get('APP_VERSION', '1.8.0')
 
 # Initialize leaderboard
 leaderboard = Leaderboard()

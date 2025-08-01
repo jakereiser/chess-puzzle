@@ -581,6 +581,9 @@ function setMode(mode) {
         return;
     }
     
+    // Store the old mode before changing
+    const oldMode = currentMode;
+    
     // Reset consecutive wins when changing difficulty modes
     if (currentMode !== mode) {
         currentStreak = 0;
@@ -615,6 +618,11 @@ function setMode(mode) {
     
     // Update hint button state
     updateHintButtonState();
+    
+    // Load new puzzle if there's an active puzzle and mode changed
+    if (currentPuzzle && oldMode !== mode) {
+        loadNewPuzzle(); // Load puzzle matching the new difficulty
+    }
     
     // Show feedback about mode change
     let modeText, message;
