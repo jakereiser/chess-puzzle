@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Chess Puzzle Game</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard2.min.css', v=version) }}">
@@ -93,9 +96,9 @@
                 <li>Click "New Puzzle" to start a new challenge</li>
                 <li>Make the best moves to solve the puzzle</li>
                 <li>Use the "💡 Hint" button if you need help</li>
-                <li><strong>Easy Mode:</strong> Puzzles rated 0-1500 with unlimited hints</li>
-                <li><strong>Hard Mode:</strong> Puzzles rated 1500+ with max 3 hints (resets streak)</li>
-                <li><strong>Hikaru Mode:</strong> Puzzles rated 1800+ with no hints allowed</li>
+                <li><strong>Easy Mode:</strong> Puzzles rated 400-1500 with unlimited hints</li>
+                <li><strong>Hard Mode:</strong> Puzzles rated 1500-2000 with max 3 hints (resets streak)</li>
+                <li><strong>Hikaru Mode:</strong> Puzzles rated 1800-3050 with no hints allowed</li>
                 <li>Solve puzzles to build your streak!</li>
             </ul>
         </div>

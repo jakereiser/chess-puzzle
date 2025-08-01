@@ -67,7 +67,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = os.environ.get('APP_VERSION', '1.6.0')
+APP_VERSION = os.environ.get('APP_VERSION', '1.7.0')
 
 # Initialize leaderboard
 leaderboard = Leaderboard()
@@ -250,8 +250,8 @@ def new_puzzle():
                 # Count white moves (every other move starting from index 0)
                 player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             else:
-                # Count black moves (all moves in solution for black puzzles)
-                player_moves_count = len(solution_moves)
+                # Count black moves (every other move starting from index 0)
+                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             
             return jsonify({
                 'success': True,
@@ -284,7 +284,7 @@ def new_puzzle():
             if player_color == "white":
                 player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             else:
-                player_moves_count = len(solution_moves)
+                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
             
             return jsonify({
                 'success': True,
@@ -364,8 +364,8 @@ def make_move():
                             # White player, so Black responds
                             response_color = "Black"
                         else:
-                            # Count remaining black moves (all remaining moves for black puzzles)
-                            remaining_player_moves = len(puzzle.solution_moves[puzzle.current_move_index:])
+                            # Count remaining black moves (every other move starting from current index + 1)
+                            remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1]) + 1
                             # Black player, so White responds
                             response_color = "White"
                         
@@ -387,8 +387,8 @@ def make_move():
                         # Count remaining white moves (every other move starting from current index)
                         remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 0])
                     else:
-                        # Count remaining black moves (all remaining moves for black puzzles)
-                        remaining_player_moves = len(puzzle.solution_moves[puzzle.current_move_index:])
+                        # Count remaining black moves (every other move starting from current index + 1)
+                        remaining_player_moves = len([move for i, move in enumerate(puzzle.solution_moves[puzzle.current_move_index:]) if i % 2 == 1]) + 1
                     
                     return jsonify({
                         'success': True,
@@ -543,6 +543,8 @@ def convert_moves_for_flipped_board(moves):
             converted_moves.append(move)
     
     return converted_moves
+
+
 
 def convert_square_coordinate(square):
     """Convert a square coordinate from normal to flipped board."""

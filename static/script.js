@@ -535,12 +535,23 @@ function resetGame() {
                 // Reset coordinate labels to default
                 resetCoordinateLabels();
                 
-                // Reset hint usage and mode for game reset
+                // Reset hint usage but maintain current mode
                 hintUsedTotal = false;
-                currentMode = 'easy';
+                hintCount = 0; // Reset hint count
                 currentStreak = 0; // Reset current streak
+                
+                // Maintain current mode selection (don't reset to 'easy')
                 $('.btn-mode').removeClass('btn-mode-active btn-mode-disabled');
-                $('#easy-mode-btn').addClass('btn-mode-active');
+                $(`#${currentMode}-mode-btn`).addClass('btn-mode-active');
+                
+                // Re-apply mode restrictions
+                if (currentMode === 'hard' || currentMode === 'hikaru') {
+                    $('#easy-mode-btn').addClass('btn-mode-disabled');
+                }
+                if (currentMode === 'hikaru') {
+                    $('#hard-mode-btn').addClass('btn-mode-disabled');
+                }
+                
                 updateHintButtonState();
                 
                 // Clear any hint highlighting and persistent messages
@@ -568,6 +579,18 @@ function setMode(mode) {
     if (currentMode === 'hikaru' && mode === 'hard') {
         showFeedback('Cannot switch from Hikaru Mode to Hard Mode! Reset the game first.', 'error');
         return;
+    }
+    
+    // Reset consecutive wins when changing difficulty modes
+    if (currentMode !== mode) {
+        currentStreak = 0;
+        $('#consecutive-wins').text('0'); // Update display immediately
+        showFeedback('Difficulty changed - streak reset to 0! 🔄', 'info');
+    } else if (currentStreak > 0) {
+        // Also reset streak if switching to same mode but have a streak
+        currentStreak = 0;
+        $('#consecutive-wins').text('0'); // Update display immediately
+        showFeedback('Mode reselected - streak reset to 0! 🔄', 'info');
     }
     
     currentMode = mode;
