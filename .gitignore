@@ -48,6 +48,7 @@ instance/
 
 # Large data files
 lichess_db_puzzle.csv
+lichess_puzzles.json
 
 # Temporary files
 s-puzzle 

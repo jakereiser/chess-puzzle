@@ -3,17 +3,17 @@
 A fun and interactive web-based chess puzzle game that challenges players with randomly generated puzzles.
 
 ## Features
-- 🎯 **Massive Puzzle Database** - 10,000+ high-quality puzzles from Lichess
-- 🎮 **Interactive Chess Board** - Modern chessboard2 library with drag and drop pieces
-- ⚡ **Instant Feedback** - Immediate rewards and punishments
-- 🏆 **Progress Tracking** - Consecutive wins counter
-- 🎉 **Enhanced Celebration System** - Chess jokes, wisdom, and visual animations
-- 💡 **Smart Hint System** - Get help with piece highlighting and guidance
-- 🎚️ **Difficulty Modes** - Easy mode (unlimited hints) and Hard mode (one hint total)
-- 📱 **Responsive Design** - Works on desktop and mobile
-- ♟️ **High-Quality Chess Pieces** - Wikipedia-style chess piece images
-- 🏅 **Rated Puzzles** - Puzzles with difficulty ratings from 800-2500+
-- 🏆 **Leaderboard System** - Track top 5 highest streaks for both Easy and Hard modes
+- **Massive Puzzle Database** - 10,000+ high-quality puzzles from Lichess
+- **Interactive Chess Board** - Modern chessboard2 library with drag and drop pieces
+- **Instant Feedback** - Immediate rewards and punishments
+- **Progress Tracking** - Consecutive wins counter
+- **Enhanced Celebration System** - Chess jokes, wisdom, and visual animations
+- **Smart Hint System** - Get help with piece highlighting and guidance
+- **Difficulty Modes** - Easy mode (unlimited hints) and Hard mode (one hint total)
+- **Responsive Design** - Works on desktop and mobile
+- **High-Quality Chess Pieces** - Wikipedia-style chess piece images
+- **Rated Puzzles** - Puzzles with difficulty ratings from 800-2500+
+- **Leaderboard System** - Track top 5 highest streaks for both Easy and Hard modes
 
 ## Getting Started
 
@@ -110,7 +110,7 @@ This will create `puzzles_combined.json` with 10,000+ puzzles. The app will fall
 4. **Easy Mode**: Puzzles rated up to 1800 with unlimited hints available
 5. **Hard Mode**: Puzzles rated 1200+ with only one hint total - use it wisely! Switching to Hard mode is permanent
 6. Solve puzzles to build your streak!
-7. Enjoy the enhanced celebration messages with chess jokes and wisdom! 🎉
+7. Enjoy the enhanced celebration messages with chess jokes and wisdom!
 
 ## API Endpoints
 - `GET /` - Main game page
