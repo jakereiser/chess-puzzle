@@ -29,21 +29,45 @@
             </div>
         </div>
 
+        <div class="leaderboard-section">
+            <h3>🏆 Leaderboard</h3>
+            <div class="leaderboard-tabs">
+                <button class="leaderboard-tab active" data-mode="easy">Easy Mode</button>
+                <button class="leaderboard-tab" data-mode="hard">Hard Mode</button>
+            </div>
+            <div class="leaderboard-content">
+                <div id="easy-leaderboard" class="leaderboard-list active">
+                    <div class="leaderboard-placeholder">Loading...</div>
+                </div>
+                <div id="hard-leaderboard" class="leaderboard-list">
+                    <div class="leaderboard-placeholder">Loading...</div>
+                </div>
+            </div>
+        </div>
+
         <div class="game-area">
             <div class="puzzle-info">
                 <h2 id="puzzle-description">Chess Board Ready</h2>
-                <p id="moves-required">Click "New Puzzle" to load a challenging position!</p>
+                <p id="moves-required">Click "New Puzzle" to start solving!</p>
             </div>
 
-            <div class="chess-board-container">
-                <div class="coordinate-labels">
-                    <div class="coordinate-left">
-                        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+            <div class="game-layout">
+                <div class="mode-selector">
+                    <label class="mode-label">Difficulty:</label>
+                    <button id="easy-mode-btn" class="btn btn-mode btn-mode-active" data-mode="easy">Easy</button>
+                    <button id="hard-mode-btn" class="btn btn-mode" data-mode="hard">Hard</button>
+                </div>
+                
+                <div class="chess-board-container">
+                    <div class="coordinate-labels">
+                        <div class="coordinate-left">
+                            <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                        </div>
+                        <div class="coordinate-bottom">
+                            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+                        </div>
+                        <div id="chessboard" class="chess-board"></div>
                     </div>
-                    <div class="coordinate-bottom">
-                        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
-                    </div>
-                    <div id="chessboard" class="chess-board"></div>
                 </div>
             </div>
 
@@ -63,9 +87,40 @@
             <ul>
                 <li>Click "New Puzzle" to start a new challenge</li>
                 <li>Make the best moves to solve the puzzle</li>
-                <li>Wrong moves will reset your consecutive wins</li>
+                <li>Use the "💡 Hint" button if you need help</li>
+                <li><strong>Easy Mode:</strong> Puzzles rated up to 1800 with unlimited hints available</li>
+                <li><strong>Hard Mode:</strong> Puzzles rated 1200+ with only one hint total - use it wisely!</li>
                 <li>Solve puzzles to build your streak!</li>
             </ul>
+        </div>
+    </div>
+
+    <!-- High Score Modal -->
+    <div id="high-score-modal" class="high-score-modal">
+        <div class="modal-content">
+            <h3>🏆 New High Score!</h3>
+            <p>Congratulations! You made it to the leaderboard!</p>
+            <input type="text" id="player-name-input" class="name-input" placeholder="Enter your name (optional)" maxlength="20">
+            <div class="modal-buttons">
+                <button id="save-score-btn" class="modal-btn modal-btn-primary">Save Score</button>
+                <button id="cancel-score-btn" class="modal-btn modal-btn-secondary">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solution Modal -->
+    <div id="solution-modal" class="solution-modal">
+        <div class="modal-content">
+            <h3>💡 Solution</h3>
+            <p id="solution-description"></p>
+            <div class="solution-moves">
+                <h4>Correct Moves:</h4>
+                <div id="solution-moves-list"></div>
+            </div>
+            <div class="modal-buttons">
+                <button id="new-puzzle-after-solution-btn" class="modal-btn modal-btn-primary">New Puzzle</button>
+                <button id="close-solution-btn" class="modal-btn modal-btn-secondary">Close</button>
+            </div>
         </div>
     </div>
 

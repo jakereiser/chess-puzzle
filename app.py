@@ -8,6 +8,16 @@ from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
 import sys
 import os
+import re
+
+# Optional imports for rate limiting
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    RATE_LIMITING_AVAILABLE = True
+except ImportError:
+    print("Warning: flask-limiter not installed. Rate limiting disabled.")
+    RATE_LIMITING_AVAILABLE = False
 
 # Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -20,9 +30,34 @@ except ImportError:
     from src.board import ChessBoard
     from src.puzzle import ChessPuzzle
 
+# Import leaderboard
+from leaderboard import Leaderboard
+
 app = Flask(__name__)
-app.secret_key = 'chess-puzzle-secret-key-2024'  # For session management
-CORS(app)  # Enable CORS for all routes
+
+# Use environment variable for secret key, fallback to random generation
+import secrets
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+
+# Configure CORS more securely
+CORS(app, origins=['https://yourdomain.com', 'http://localhost:5000'], 
+     supports_credentials=True)
+
+# Initialize rate limiter (optional)
+if RATE_LIMITING_AVAILABLE:
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"]
+    )
+else:
+    # Create a dummy limiter that does nothing
+    class DummyLimiter:
+        def limit(self, *args, **kwargs):
+            def decorator(f):
+                return f
+            return decorator
+    limiter = DummyLimiter()
 
 # Global game state (in production, use a proper database)
 game_state = {
@@ -30,6 +65,84 @@ game_state = {
     'consecutive_wins': 0,
     'total_puzzles_solved': 0
 }
+
+# Initialize leaderboard
+leaderboard = Leaderboard()
+
+# Input validation functions
+def validate_uci_move(move):
+    """Validate UCI move format."""
+    if not move or not isinstance(move, str):
+        return False
+    # UCI format: e2e4, e7e8q, etc.
+    pattern = r'^[a-h][1-8][a-h][1-8][qrbn]?$'
+    return bool(re.match(pattern, move))
+
+def validate_difficulty(difficulty):
+    """Validate difficulty parameter."""
+    return difficulty in ['easy', 'hard']
+
+def sanitize_player_name(name):
+    """Sanitize player name input."""
+    if not name:
+        return None
+    # Remove any non-alphanumeric characters except spaces and hyphens
+    sanitized = re.sub(r'[^a-zA-Z0-9\s\-]', '', str(name))
+    return sanitized.strip()[:20]  # Limit to 20 characters
+
+def generate_puzzle_description(original_description, player_color, puzzle_data):
+    """Generate a better puzzle description based on player color and puzzle data."""
+    # Convert player color to proper case
+    color_name = player_color.capitalize()
+    
+    # Check if the original description has specific tactical themes
+    original_lower = original_description.lower()
+    
+    # Define common tactical themes and their descriptions
+    tactical_themes = {
+        'fork': f"{color_name} to move and fork",
+        'pin': f"{color_name} to move and pin",
+        'skewer': f"{color_name} to move and skewer",
+        'discovered attack': f"{color_name} to move with discovered attack",
+        'double attack': f"{color_name} to move with double attack",
+        'back rank': f"{color_name} to move and checkmate on back rank",
+        'checkmate': f"{color_name} to move and checkmate",
+        'mate': f"{color_name} to move and checkmate",
+        'win material': f"{color_name} to move and win material",
+        'capture': f"{color_name} to move and capture",
+        'check': f"{color_name} to move and check",
+        'promote': f"{color_name} to move and promote",
+        'defend': f"{color_name} to move and defend",
+        'block': f"{color_name} to move and block",
+        'escape': f"{color_name} to move and escape",
+        'sacrifice': f"{color_name} to move and sacrifice",
+        'zugzwang': f"{color_name} to move and create zugzwang",
+        'gain advantage': f"{color_name} to gain advantage",
+        'advantage': f"{color_name} to gain advantage",
+        'tactical advantage': f"{color_name} to gain tactical advantage",
+        'positional advantage': f"{color_name} to gain positional advantage"
+    }
+    
+    # Check for specific themes in the original description
+    for theme, description in tactical_themes.items():
+        if theme in original_lower:
+            return description
+    
+    # Check for themes in puzzle data if available
+    if 'themes' in puzzle_data and puzzle_data['themes']:
+        themes = puzzle_data['themes']
+        if isinstance(themes, list):
+            themes = ' '.join(themes).lower()
+        else:
+            themes = str(themes).lower()
+        
+        # Check themes for specific tactical patterns
+        for theme, description in tactical_themes.items():
+            if theme in themes:
+                return description
+    
+    # If no specific theme found, use a generic description
+    return f"{color_name} to move"
 
 @app.route('/')
 def index():
@@ -44,24 +157,53 @@ def test():
 
 
 @app.route('/api/new-puzzle', methods=['POST'])
+@limiter.limit("30 per minute")
 def new_puzzle():
     """Generate a new puzzle for the player."""
     try:
+        # Get difficulty mode from request
+        data = request.get_json() or {}
+        difficulty = data.get('difficulty', 'easy')  # Default to easy mode
+        
+        # Validate difficulty parameter
+        if not validate_difficulty(difficulty):
+            return jsonify({'success': False, 'error': 'Invalid difficulty parameter'}), 400
+        
         # Load puzzles from JSON file
         import json
         import random
         
         try:
-            with open('puzzles.json', 'r') as f:
+            with open('puzzles_combined.json', 'r') as f:
                 puzzle_data = json.load(f)
             
-            # Randomly select a puzzle
-            puzzle = random.choice(puzzle_data['puzzles'])
+            # Filter puzzles by difficulty
+            if difficulty == 'easy':
+                # Easy mode: puzzles rated up to 1800
+                filtered_puzzles = [p for p in puzzle_data['puzzles'] 
+                                 if 'rating' in p and 1 <= p['rating'] <= 1800]
+            elif difficulty == 'hard':
+                # Hard mode: puzzles rated 1200+
+                filtered_puzzles = [p for p in puzzle_data['puzzles'] 
+                                 if 'rating' in p and p['rating'] >= 1200]
+            else:
+                # Default to all puzzles if difficulty not specified
+                filtered_puzzles = puzzle_data['puzzles']
+            
+            # If no puzzles found for the difficulty, fall back to all puzzles
+            if not filtered_puzzles:
+                filtered_puzzles = puzzle_data['puzzles']
+            
+            # Randomly select a puzzle from filtered list
+            puzzle = random.choice(filtered_puzzles)
             
             initial_fen = puzzle['fen']
             solution_moves = puzzle['solution']
-            description = puzzle['description']
+            original_description = puzzle['description']
             player_color = puzzle['player_color']
+            
+            # Generate better description based on player color and puzzle data
+            description = generate_puzzle_description(original_description, player_color, puzzle)
             
             # Keep coordinates consistent - no conversion needed
             # The frontend will handle the visual flip while maintaining coordinate consistency
@@ -122,14 +264,19 @@ def new_puzzle():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/make-move', methods=['POST'])
+@limiter.limit("100 per minute")
 def make_move():
     """Process a player's move."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Invalid request data'}), 400
+            
         move_uci = data.get('move')
         
-        print(f"Received move: {move_uci}")
-        print(f"Current puzzle FEN: {game_state['current_puzzle'].board.get_fen() if game_state['current_puzzle'] else 'None'}")
+        # Validate move format
+        if not validate_uci_move(move_uci):
+            return jsonify({'success': False, 'error': 'Invalid move format'}), 400
         
         if not game_state['current_puzzle']:
             return jsonify({'success': False, 'error': 'No active puzzle'}), 400
@@ -137,36 +284,23 @@ def make_move():
         puzzle = game_state['current_puzzle']
         player_color = game_state.get('player_color', 'white')
         
-        print(f"Received move: {move_uci} for player color: {player_color}")
-        
         # Check if move is valid
         is_valid = puzzle.board.is_valid_move(move_uci)
-        print(f"Move {move_uci} is valid: {is_valid}")
         
         if not is_valid:
-            legal_moves = puzzle.board.get_legal_moves()
-            print(f"Legal moves: {legal_moves[:10]}...")  # Show first 10 moves
-            print(f"Current FEN: {puzzle.board.get_fen()}")
             return jsonify({
-                'success': False,
-                'message': 'Invalid move!',
-                'type': 'error'
+                'success': False
             })
         
         # Make the move
         success = puzzle.board.make_move(move_uci)
         if not success:
             return jsonify({
-                'success': False,
-                'message': 'Move failed!',
-                'type': 'error'
+                'success': False
             })
         
         # Check if this was the correct move
         expected_move = puzzle.solution_moves[puzzle.current_move_index]
-        print(f"Expected move: {expected_move}")
-        print(f"Actual move: {move_uci}")
-        print(f"Move index: {puzzle.current_move_index}")
         
         if move_uci == expected_move:
             puzzle.current_move_index += 1
@@ -177,8 +311,6 @@ def make_move():
                 game_state['total_puzzles_solved'] += 1
                 return jsonify({
                     'success': True,
-                    'message': 'Puzzle solved! 🎉',
-                    'type': 'success',
                     'puzzle_complete': True,
                     'moves_required': 0,
                     'consecutive_wins': game_state['consecutive_wins']
@@ -206,8 +338,6 @@ def make_move():
                         
                         return jsonify({
                             'success': True,
-                            'message': f'Good move! {response_color} responds with {black_move}',
-                            'type': 'success',
                             'puzzle_complete': False,
                             'moves_required': remaining_player_moves,
                             'black_move': black_move,
@@ -215,9 +345,7 @@ def make_move():
                         })
                     else:
                         return jsonify({
-                            'success': False,
-                            'message': 'Error making black move!',
-                            'type': 'error'
+                            'success': False
                         })
                 else:
                     # Calculate remaining moves for the player's color
@@ -231,8 +359,6 @@ def make_move():
                     
                     return jsonify({
                         'success': True,
-                        'message': 'Good move! Keep going!',
-                        'type': 'success',
                         'puzzle_complete': False,
                         'moves_required': remaining_player_moves
                     })
@@ -242,10 +368,10 @@ def make_move():
             puzzle.reset()  # Reset the puzzle board to original position
             return jsonify({
                 'success': False,
-                'message': 'Wrong move! Try again!',
-                'type': 'error',
                 'consecutive_wins': game_state['consecutive_wins'],
-                'original_fen': puzzle.initial_fen  # Send the original puzzle FEN
+                'original_fen': puzzle.initial_fen,  # Send the original puzzle FEN
+                'solution_moves': puzzle.solution_moves,  # Send the solution moves
+                'description': puzzle.description  # Send the puzzle description
             })
             
     except Exception as e:
@@ -298,6 +424,72 @@ def get_hint():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """Get leaderboard data for both modes."""
+    try:
+        data = leaderboard.get_leaderboard_data()
+        return jsonify({
+            'success': True,
+            'leaderboard': data
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/check-high-score', methods=['POST'])
+def check_high_score():
+    """Check if a score would make it to the leaderboard."""
+    try:
+        data = request.get_json()
+        mode = data.get('mode')
+        score = data.get('score')
+        
+        if not mode or score is None:
+            return jsonify({'success': False, 'error': 'Missing mode or score'}), 400
+        
+        is_high_score = leaderboard.check_if_high_score(mode, score)
+        
+        return jsonify({
+            'success': True,
+            'is_high_score': is_high_score
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/add-score', methods=['POST'])
+@limiter.limit("10 per minute")
+def add_score():
+    """Add a score to the leaderboard."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Invalid request data'}), 400
+            
+        mode = data.get('mode')
+        score = data.get('score')
+        player_name = data.get('player_name')
+        
+        # Validate inputs
+        if not validate_difficulty(mode):
+            return jsonify({'success': False, 'error': 'Invalid mode parameter'}), 400
+            
+        if not isinstance(score, int) or score < 0 or score > 10000:
+            return jsonify({'success': False, 'error': 'Invalid score value'}), 400
+        
+        # Sanitize player name
+        sanitized_name = sanitize_player_name(player_name)
+        
+        result = leaderboard.add_score(mode, score, sanitized_name)
+        
+        return jsonify({
+            'success': True,
+            'position': result['position'],
+            'is_new_high_score': result['is_new_high_score'],
+            'top_scores': result['top_scores']
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 def convert_moves_for_flipped_board(moves):
     """Convert UCI moves from normal board coordinates to flipped board coordinates."""
     converted_moves = []
@@ -336,9 +528,12 @@ def convert_square_coordinate(square):
     new_file = file_map.get(file, file)
     new_rank = rank_map.get(rank, rank)
     
-    print(f"Converting square {square}: file={file}->{new_file}, rank={rank}->{new_rank}")
-    
     return new_file + new_rank
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    # Production configuration
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    host = os.environ.get('HOST', '0.0.0.0')  # Changed to 0.0.0.0 for production
+    port = int(os.environ.get('PORT', 5000))
+    
+    app.run(debug=debug_mode, host=host, port=port) 

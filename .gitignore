@@ -44,4 +44,12 @@ instance/
 
 # Environment variables
 .env
-.env.local 
+.env.local
+
+# Large data files
+lichess_db_puzzle.csv
+lichess_puzzles.json
+puzzles_combined.json
+
+# Temporary files
+s-puzzle 
