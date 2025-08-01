@@ -3,8 +3,9 @@
 let board = null;
 let game = null;
 let currentPuzzle = null;
-let currentMode = 'easy'; // 'easy' or 'hard'
+let currentMode = 'easy'; // 'easy', 'hard', or 'hikaru'
 let hintUsedTotal = false; // Track if hint was used in hard mode (one total)
+let hintCount = 0; // Track hint count for hard mode (max 3)
 let currentStreak = 0; // Track current streak for leaderboard
 
 // Global error handler to prevent uncaught exceptions
@@ -127,6 +128,10 @@ function setupEventListeners() {
     
     $('#hard-mode-btn').click(function() {
         setMode('hard');
+    });
+    
+    $('#hikaru-mode-btn').click(function() {
+        setMode('hikaru');
     });
     
     // Leaderboard tab buttons
@@ -553,23 +558,24 @@ function resetGame() {
 }
 
 function setMode(mode) {
-    // Prevent switching from Hard back to Easy
-    if (currentMode === 'hard' && mode === 'easy') {
-        showFeedback('Cannot switch back to Easy Mode once Hard Mode is selected!', 'error');
+    // Prevent switching from Hard/Hikaru back to Easy
+    if ((currentMode === 'hard' || currentMode === 'hikaru') && mode === 'easy') {
+        showFeedback('Cannot switch back to Easy Mode once Hard or Hikaru Mode is selected!', 'error');
         return;
     }
     
     currentMode = mode;
     if (mode === 'easy') {
         hintUsedTotal = false; // Reset hint usage when switching to easy
+        hintCount = 0; // Reset hint count
     }
     
     // Update button styling
     $('.btn-mode').removeClass('btn-mode-active btn-mode-disabled');
     $(`#${mode}-mode-btn`).addClass('btn-mode-active');
     
-    // Disable Easy button if Hard mode is selected
-    if (mode === 'hard') {
+    // Disable Easy button if Hard or Hikaru mode is selected
+    if (mode === 'hard' || mode === 'hikaru') {
         $('#easy-mode-btn').addClass('btn-mode-disabled');
     }
     
@@ -577,18 +583,31 @@ function setMode(mode) {
     updateHintButtonState();
     
     // Show feedback about mode change
-    const modeText = mode === 'easy' ? 'Easy Mode' : 'Hard Mode';
-    const message = mode === 'easy' 
-        ? `${modeText} - Unlimited hints available! 💡` 
-        : `${modeText} - Only one hint total - use it wisely! ⚠️`;
+    let modeText, message;
+    if (mode === 'easy') {
+        modeText = 'Easy Mode';
+        message = `${modeText} - Unlimited hints available! 💡`;
+    } else if (mode === 'hard') {
+        modeText = 'Hard Mode';
+        message = `${modeText} - Max 3 hints (resets streak)! ⚠️`;
+    } else if (mode === 'hikaru') {
+        modeText = 'Hikaru Mode';
+        message = `${modeText} - No hints allowed! 🏆`;
+    }
     showFeedback(message, 'success');
 }
 
 function updateHintButtonState() {
     const hintBtn = $('#hint-btn');
-    if (currentMode === 'hard' && hintUsedTotal) {
+    if (currentMode === 'hikaru') {
         hintBtn.prop('disabled', true);
-        hintBtn.text('💡 Hint (Used)');
+        hintBtn.text('💡 Hint (Not Allowed)');
+    } else if (currentMode === 'hard' && hintCount >= 3) {
+        hintBtn.prop('disabled', true);
+        hintBtn.text('💡 Hint (Max Used)');
+    } else if (currentMode === 'hard') {
+        hintBtn.prop('disabled', false);
+        hintBtn.text(`💡 Hint (${3 - hintCount} left)`);
     } else {
         hintBtn.prop('disabled', false);
         hintBtn.text('💡 Hint');
@@ -601,9 +620,14 @@ function getHint() {
         return;
     }
     
-    // Check hard mode restrictions
-    if (currentMode === 'hard' && hintUsedTotal) {
-        showFeedback('You\'ve already used your one hint in Hard Mode!', 'error');
+    // Check mode restrictions
+    if (currentMode === 'hikaru') {
+        showFeedback('No hints allowed in Hikaru Mode!', 'error');
+        return;
+    }
+    
+    if (currentMode === 'hard' && hintCount >= 3) {
+        showFeedback('You\'ve used all 3 hints in Hard Mode!', 'error');
         return;
     }
     
@@ -615,9 +639,9 @@ function getHint() {
                 showFeedback(response.message, 'success', true); // Persistent message
                 highlightSquare(response.hint_square);
                 
-                // Mark hint as used in hard mode
+                // Update hint count for hard mode
                 if (currentMode === 'hard') {
-                    hintUsedTotal = true;
+                    hintCount++;
                     updateHintButtonState();
                 }
             } else {
@@ -807,6 +831,9 @@ function updateLeaderboardDisplay(leaderboardData) {
     
     // Update Hard mode leaderboard
     updateLeaderboardList('hard', leaderboardData.hard);
+    
+    // Update Hikaru mode leaderboard
+    updateLeaderboardList('hikaru', leaderboardData.hikaru);
 }
 
 function updateLeaderboardList(mode, scores) {

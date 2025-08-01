@@ -9,11 +9,11 @@ A fun and interactive web-based chess puzzle game that challenges players with r
 - **Progress Tracking** - Consecutive wins counter
 - **Enhanced Celebration System** - Chess jokes, wisdom, and visual animations
 - **Smart Hint System** - Get help with piece highlighting and guidance
-- **Difficulty Modes** - Easy mode (unlimited hints) and Hard mode (one hint total)
+- **Three Difficulty Modes** - Easy (unlimited hints), Hard (max 3 hints), and Hikaru (no hints)
 - **Responsive Design** - Works on desktop and mobile
 - **High-Quality Chess Pieces** - Wikipedia-style chess piece images
-- **Rated Puzzles** - Puzzles with difficulty ratings from 800-2500+
-- **Leaderboard System** - Track top 5 highest streaks for both Easy and Hard modes
+- **Rated Puzzles** - Puzzles with difficulty ratings from 400-3050+
+- **Leaderboard System** - Track top 5 highest streaks for all difficulty modes
 
 ## Getting Started
 
@@ -83,7 +83,7 @@ chess-puzzle/
 
 ## Database Setup
 
-The large puzzle database files are not included in the repository due to size constraints. To set up the full database:
+The puzzle database is optimized for caching performance with 5,000 high-quality puzzles. To set up the database:
 
 1. **Download the Lichess puzzle database:**
    ```bash
@@ -101,16 +101,22 @@ The large puzzle database files are not included in the repository due to size c
    python merge_puzzles.py
    ```
 
-This will create `puzzles_combined.json` with 10,000+ puzzles. The app will fall back to the original `puzzles.json` if the combined database is not available.
+4. **Reduce to 5,000 puzzles (optional, for better caching):**
+   ```bash
+   python reduce_puzzles.py
+   ```
+
+This creates `puzzles_combined.json` with 5,000 puzzles optimized for performance. The app will fall back to the original `puzzles.json` if the combined database is not available.
 
 ## How to Play
 1. Click "New Puzzle" to start a challenge
 2. Make the best moves to solve the puzzle
 3. Use the "💡 Hint" button if you need help - it will highlight the piece to move
-4. **Easy Mode**: Puzzles rated up to 1800 with unlimited hints available
-5. **Hard Mode**: Puzzles rated 1200+ with only one hint total - use it wisely! Switching to Hard mode is permanent
-6. Solve puzzles to build your streak!
-7. Enjoy the enhanced celebration messages with chess jokes and wisdom!
+4. **Easy Mode**: Puzzles rated 400-1500 with unlimited hints available
+5. **Hard Mode**: Puzzles rated 1500-2000 with maximum 3 hints (resets streak)
+6. **Hikaru Mode**: Puzzles rated 1800-3050 with no hints allowed - ultimate challenge!
+7. Solve puzzles to build your streak!
+8. Enjoy the enhanced celebration messages with chess jokes and wisdom!
 
 ## API Endpoints
 - `GET /` - Main game page

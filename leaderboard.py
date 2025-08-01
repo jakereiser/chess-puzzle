@@ -26,7 +26,8 @@ class Leaderboard:
         # Default structure
         return {
             'easy': [],
-            'hard': []
+            'hard': [],
+            'hikaru': []
         }
     
     def _save_leaderboard(self):
@@ -46,8 +47,8 @@ class Leaderboard:
         Returns:
             Dict with info about the score placement
         """
-        if mode not in ['easy', 'hard']:
-            raise ValueError("Mode must be 'easy' or 'hard'")
+        if mode not in ['easy', 'hard', 'hikaru']:
+            raise ValueError("Mode must be 'easy', 'hard', or 'hikaru'")
         
         # Generate anonymous name if none provided
         if not player_name:
@@ -96,7 +97,7 @@ class Leaderboard:
     
     def check_if_high_score(self, mode: str, score: int) -> bool:
         """Check if a score would make it to the top 5."""
-        if mode not in ['easy', 'hard']:
+        if mode not in ['easy', 'hard', 'hikaru']:
             return False
         
         current_scores = self.leaderboard[mode]
@@ -110,8 +111,9 @@ class Leaderboard:
         return score > lowest_score
     
     def get_leaderboard_data(self) -> Dict:
-        """Get complete leaderboard data for both modes."""
+        """Get complete leaderboard data for all modes."""
         return {
             'easy': self.get_top_scores('easy'),
-            'hard': self.get_top_scores('hard')
+            'hard': self.get_top_scores('hard'),
+            'hikaru': self.get_top_scores('hikaru')
         } 

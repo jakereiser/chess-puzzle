@@ -4,7 +4,7 @@ Chess Puzzle Web Application
 Flask-based web server for the chess puzzle game.
 """
 
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, make_response
 from flask_cors import CORS
 import sys
 import os
@@ -66,8 +66,26 @@ game_state = {
     'total_puzzles_solved': 0
 }
 
+# Cache busting version - change this to force cache refresh
+APP_VERSION = os.environ.get('APP_VERSION', '1.5.0')
+
 # Initialize leaderboard
 leaderboard = Leaderboard()
+
+# Add cache headers for static files
+# @app.after_request
+# def add_cache_headers(response):
+#     """Add cache control headers to responses."""
+#     if request.endpoint == 'static':
+#         # For static files, use cache busting
+#         response.headers['Cache-Control'] = 'public, max-age=3600'  # 1 hour
+#         response.headers['Vary'] = 'Accept-Encoding'
+#     else:
+#         # For dynamic content, prevent caching
+#         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+#         response.headers['Pragma'] = 'no-cache'
+#         response.headers['Expires'] = '0'
+#     return response
 
 # Input validation functions
 def validate_uci_move(move):
@@ -80,7 +98,7 @@ def validate_uci_move(move):
 
 def validate_difficulty(difficulty):
     """Validate difficulty parameter."""
-    return difficulty in ['easy', 'hard']
+    return difficulty in ['easy', 'hard', 'hikaru']
 
 def sanitize_player_name(name):
     """Sanitize player name input."""
@@ -147,7 +165,7 @@ def generate_puzzle_description(original_description, player_color, puzzle_data)
 @app.route('/')
 def index():
     """Main game page."""
-    return render_template('index.html')
+    return render_template('index.html', version=APP_VERSION)
 
 @app.route('/test')
 def test():
@@ -179,13 +197,17 @@ def new_puzzle():
             
             # Filter puzzles by difficulty
             if difficulty == 'easy':
-                # Easy mode: puzzles rated up to 1800
+                # Easy mode: puzzles rated 400-1500
                 filtered_puzzles = [p for p in puzzle_data['puzzles'] 
-                                 if 'rating' in p and 1 <= p['rating'] <= 1800]
+                                 if 'rating' in p and 400 <= p['rating'] <= 1500]
             elif difficulty == 'hard':
-                # Hard mode: puzzles rated 1200+
+                # Hard mode: puzzles rated 1500-2000
                 filtered_puzzles = [p for p in puzzle_data['puzzles'] 
-                                 if 'rating' in p and p['rating'] >= 1200]
+                                 if 'rating' in p and 1500 <= p['rating'] <= 2000]
+            elif difficulty == 'hikaru':
+                # Hikaru mode: puzzles rated 1800-3050
+                filtered_puzzles = [p for p in puzzle_data['puzzles'] 
+                                 if 'rating' in p and 1800 <= p['rating'] <= 3050]
             else:
                 # Default to all puzzles if difficulty not specified
                 filtered_puzzles = puzzle_data['puzzles']
@@ -204,6 +226,13 @@ def new_puzzle():
             
             # Generate better description based on player color and puzzle data
             description = generate_puzzle_description(original_description, player_color, puzzle)
+            
+            # Add puzzle rating to description if available
+            if 'rating' in puzzle:
+                rating = puzzle['rating']
+                # Round to nearest 50
+                rounded_rating = round(rating / 50) * 50
+                description = f"{description} (Rated {rounded_rating})"
             
             # Keep coordinates consistent - no conversion needed
             # The frontend will handle the visual flip while maintaining coordinate consistency

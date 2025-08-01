@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess Puzzle Game</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard2.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard2.min.css', v=version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=version) }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="{{ url_for('static', filename='js/chessboard2.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chessboard2.min.js', v=version) }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
 <body>
@@ -34,12 +34,16 @@
             <div class="leaderboard-tabs">
                 <button class="leaderboard-tab active" data-mode="easy">Easy Mode</button>
                 <button class="leaderboard-tab" data-mode="hard">Hard Mode</button>
+                <button class="leaderboard-tab" data-mode="hikaru">Hikaru Mode</button>
             </div>
             <div class="leaderboard-content">
                 <div id="easy-leaderboard" class="leaderboard-list active">
                     <div class="leaderboard-placeholder">Loading...</div>
                 </div>
                 <div id="hard-leaderboard" class="leaderboard-list">
+                    <div class="leaderboard-placeholder">Loading...</div>
+                </div>
+                <div id="hikaru-leaderboard" class="leaderboard-list">
                     <div class="leaderboard-placeholder">Loading...</div>
                 </div>
             </div>
@@ -56,6 +60,7 @@
                     <label class="mode-label">Difficulty:</label>
                     <button id="easy-mode-btn" class="btn btn-mode btn-mode-active" data-mode="easy">Easy</button>
                     <button id="hard-mode-btn" class="btn btn-mode" data-mode="hard">Hard</button>
+                    <button id="hikaru-mode-btn" class="btn btn-mode" data-mode="hikaru">Hikaru</button>
                 </div>
                 
                 <div class="chess-board-container">
@@ -88,8 +93,9 @@
                 <li>Click "New Puzzle" to start a new challenge</li>
                 <li>Make the best moves to solve the puzzle</li>
                 <li>Use the "💡 Hint" button if you need help</li>
-                <li><strong>Easy Mode:</strong> Puzzles rated up to 1800 with unlimited hints available</li>
-                <li><strong>Hard Mode:</strong> Puzzles rated 1200+ with only one hint total - use it wisely!</li>
+                <li><strong>Easy Mode:</strong> Puzzles rated 0-1500 with unlimited hints</li>
+                <li><strong>Hard Mode:</strong> Puzzles rated 1500+ with max 3 hints (resets streak)</li>
+                <li><strong>Hikaru Mode:</strong> Puzzles rated 1800+ with no hints allowed</li>
                 <li>Solve puzzles to build your streak!</li>
             </ul>
         </div>
@@ -130,6 +136,6 @@
         </div>
     </footer>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js', v=version) }}"></script>
 </body>
 </html> 
