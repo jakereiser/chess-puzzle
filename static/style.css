@@ -791,42 +791,38 @@ header h1 {
         order: -1; /* Move to top */
     }
     
-    /* Chess board mobile optimizations - Scale down to 80% */
+    /* Chess board mobile optimizations - Fill available space */
     .chess-board-container {
         width: 100%;
-        max-width: 320px; /* 400px * 0.8 = 320px */
+        max-width: 400px; /* Restore to original size */
         margin: 0 auto;
         background: transparent;
         box-shadow: none; /* Remove shadow on mobile for cleaner look */
-        transform: scale(0.8);
-        transform-origin: center center;
     }
     
     .chess-board {
         width: 100% !important;
         height: auto !important;
-        max-width: 320px; /* 400px * 0.8 = 320px */
-        max-height: 320px; /* 400px * 0.8 = 320px */
+        max-width: 400px; /* Restore to original size */
+        max-height: 400px; /* Restore to original size */
         aspect-ratio: 1; /* Maintain square aspect ratio */
     }
     
     /* Coordinate labels for mobile */
     .coordinate-labels {
-        padding: 0 12px 12px 12px; /* Reduced padding to match 80% scale */
-        transform: scale(0.8);
-        transform-origin: center center;
+        padding: 0 15px 15px 15px; /* Restore original padding */
     }
     
     .coordinate-left {
-        width: 12px; /* 15px * 0.8 = 12px */
-        font-size: 8px; /* 10px * 0.8 = 8px */
+        width: 15px; /* Restore original size */
+        font-size: 10px; /* Restore original size */
     }
     
     .coordinate-bottom {
-        font-size: 8px; /* 10px * 0.8 = 8px */
-        bottom: -12px; /* 15px * 0.8 = 12px */
-        left: 12px; /* 15px * 0.8 = 12px */
-        width: calc(100% - 24px); /* 30px * 0.8 = 24px */
+        font-size: 10px; /* Restore original size */
+        bottom: -15px; /* Restore original size */
+        left: 15px; /* Restore original size */
+        width: calc(100% - 30px); /* Restore original size */
     }
     
     /* Game stats for mobile */
@@ -935,12 +931,12 @@ header h1 {
     }
     
     .chess-board {
-        max-width: 280px; /* 350px * 0.8 = 280px */
-        max-height: 280px; /* 350px * 0.8 = 280px */
+        max-width: 350px; /* Restore original size */
+        max-height: 350px; /* Restore original size */
     }
     
     .chess-board-container {
-        max-width: 280px; /* 350px * 0.8 = 280px */
+        max-width: 350px; /* Restore original size */
     }
     
     .btn {
