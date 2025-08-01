@@ -564,6 +564,12 @@ function setMode(mode) {
         return;
     }
     
+    // Prevent switching from Hikaru to Hard mode
+    if (currentMode === 'hikaru' && mode === 'hard') {
+        showFeedback('Cannot switch from Hikaru Mode to Hard Mode! Reset the game first.', 'error');
+        return;
+    }
+    
     currentMode = mode;
     if (mode === 'easy') {
         hintUsedTotal = false; // Reset hint usage when switching to easy
@@ -577,6 +583,11 @@ function setMode(mode) {
     // Disable Easy button if Hard or Hikaru mode is selected
     if (mode === 'hard' || mode === 'hikaru') {
         $('#easy-mode-btn').addClass('btn-mode-disabled');
+    }
+    
+    // Disable Hard button if Hikaru mode is selected
+    if (mode === 'hikaru') {
+        $('#hard-mode-btn').addClass('btn-mode-disabled');
     }
     
     // Update hint button state

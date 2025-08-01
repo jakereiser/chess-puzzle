@@ -67,7 +67,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = os.environ.get('APP_VERSION', '1.5.0')
+APP_VERSION = os.environ.get('APP_VERSION', '1.6.0')
 
 # Initialize leaderboard
 leaderboard = Leaderboard()
@@ -165,7 +165,11 @@ def generate_puzzle_description(original_description, player_color, puzzle_data)
 @app.route('/')
 def index():
     """Main game page."""
-    return render_template('index.html', version=APP_VERSION)
+    response = make_response(render_template('index.html', version=APP_VERSION))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/test')
 def test():
