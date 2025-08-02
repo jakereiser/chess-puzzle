@@ -1067,9 +1067,16 @@ function resetCoordinateLabels() {
 
 // Leaderboard Functions
 function loadLeaderboard() {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
     $.ajax({
-        url: '/api/leaderboard',
+        url: `/api/leaderboard?t=${timestamp}`,
         method: 'GET',
+        cache: false, // Prevent browser caching
+        headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        },
         success: function(response) {
             if (response.success) {
                 updateLeaderboardDisplay(response.leaderboard);

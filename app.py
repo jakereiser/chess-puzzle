@@ -67,7 +67,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = '1.21.0'  # Force version for testing
+APP_VERSION = '1.22.0'  # Force version for testing
 
 # Initialize leaderboard
 leaderboard = Leaderboard()
@@ -448,10 +448,17 @@ def get_leaderboard():
     """Get leaderboard data for both modes."""
     try:
         data = leaderboard.get_leaderboard_data()
-        return jsonify({
+        response = jsonify({
             'success': True,
             'leaderboard': data
         })
+        
+        # Add cache-busting headers for mobile browsers
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
