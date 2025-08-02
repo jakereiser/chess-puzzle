@@ -30,6 +30,14 @@ pip install -r requirements.txt
 
 **Development:**
 ```bash
+# Option 1: Use the development runner (recommended)
+python dev.py
+
+# Option 2: Manual setup
+# Set up local development environment (first time only)
+python setup_dev.py
+
+# Run the application
 python app.py
 ```
 
@@ -39,6 +47,8 @@ export FLASK_ENV=production
 export SECRET_KEY=your-secure-secret-key-here
 python app.py
 ```
+
+**Note:** The development environment uses a separate local leaderboard file (`leaderboard_local.json`) to prevent conflicts with the production leaderboard. This file is automatically created and ignored by Git.
 
 Then open your browser and go to: `http://localhost:5000`
 

@@ -109,7 +109,10 @@
         <div class="modal-content">
             <h3>🏆 New High Score!</h3>
             <p>Congratulations! You made it to the leaderboard!</p>
-            <input type="text" id="player-name-input" class="name-input" placeholder="Enter your name (optional)" maxlength="20">
+            <div class="name-input-container">
+                <input type="text" id="player-name-input" class="name-input" placeholder="Enter your name (optional)" maxlength="20">
+                <button id="clear-name-btn" class="clear-name-btn" title="Clear saved name">🗑️</button>
+            </div>
             <div class="modal-buttons">
                 <button id="save-score-btn" class="modal-btn modal-btn-primary">Save Score</button>
                 <button id="cancel-score-btn" class="modal-btn modal-btn-secondary">Skip</button>

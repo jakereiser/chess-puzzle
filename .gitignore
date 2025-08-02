@@ -55,4 +55,9 @@ puzzles_combined_backup.json
 reduce_puzzles.py
 
 # Temporary files
-s-puzzle 
+s-puzzle
+
+# Local development files
+leaderboard_local.json
+*.backup
+*.emergency 

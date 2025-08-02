@@ -209,14 +209,37 @@ header h1 {
     color: #f0f0f0;
 }
 
+.name-input-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
 .name-input {
     width: 100%;
     padding: 12px;
+    padding-right: 40px; /* Space for the clear button */
     border: none;
     border-radius: 8px;
     font-size: 1rem;
-    margin-bottom: 20px;
     background: rgba(255,255,255,0.9);
+}
+
+.clear-name-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.clear-name-btn:hover {
+    background: rgba(255,255,255,0.2);
 }
 
 .modal-buttons {

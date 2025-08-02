@@ -286,6 +286,11 @@ function setupEventListeners() {
         }
     });
     
+    // Clear saved name button
+    $('#clear-name-btn').click(function() {
+        clearSavedPlayerName();
+    });
+    
     // Solution modal event listeners
     $('#new-puzzle-after-solution-btn').click(function() {
         hideSolutionModal();
@@ -814,9 +819,19 @@ function showFeedback(message, type, persistent = false, consecutiveWins = 0) {
     
     // Only auto-hide if not persistent
     if (!persistent) {
+        // Determine display time based on message type
+        let displayTime = 5000; // Default 5 seconds
+        
+        // Check if it's a joke (contains emoji and is success type)
+        if (type === 'success' && (message.includes('😄') || message.includes('😊') || message.includes('😎') || message.includes('🦉') || message.includes('💃') || message.includes('☕') || message.includes('💪'))) {
+            displayTime = 8000; // 8 seconds for jokes
+        } else if (type === 'success') {
+            displayTime = 6000; // 6 seconds for other positive messages
+        }
+        
         setTimeout(function() {
             feedbackElement.removeClass('show');
-        }, 5000); // Increased from 3 seconds to 5 seconds
+        }, displayTime);
     }
 }
 
@@ -1271,7 +1286,10 @@ function checkHighScore(mode, score) {
 }
 
 function showHighScoreModal(mode, score) {
-    $('#player-name-input').val('');
+    // Load saved player name from localStorage
+    const savedPlayerName = localStorage.getItem('chess_puzzle_player_name');
+    $('#player-name-input').val(savedPlayerName || '');
+    
     $('#high-score-modal').show();
     
     // Store the score data for when user saves
@@ -1282,9 +1300,20 @@ function hideHighScoreModal() {
     $('#high-score-modal').hide();
 }
 
+function clearSavedPlayerName() {
+    localStorage.removeItem('chess_puzzle_player_name');
+    $('#player-name-input').val('');
+    showFeedback('Saved name cleared!', 'info');
+}
+
 function saveHighScore() {
     const scoreData = $('#high-score-modal').data('score-data');
     const playerName = $('#player-name-input').val().trim();
+    
+    // Save player name to localStorage for future use
+    if (playerName) {
+        localStorage.setItem('chess_puzzle_player_name', playerName);
+    }
     
     $.ajax({
         url: '/api/add-score',

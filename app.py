@@ -9,6 +9,8 @@ from flask_cors import CORS
 import sys
 import os
 import re
+import secrets
+import random
 from datetime import datetime
 
 # Optional imports for rate limiting
@@ -37,7 +39,6 @@ from leaderboard import Leaderboard
 app = Flask(__name__)
 
 # Use environment variable for secret key, fallback to random generation
-import secrets
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 # Configure CORS more securely
@@ -70,8 +71,18 @@ game_state = {
 # Cache busting version - change this to force cache refresh
 APP_VERSION = '1.26.0'  # Force version for testing
 
-# Initialize leaderboard
-leaderboard = Leaderboard()
+# Initialize leaderboard with environment-specific filename
+# Use different leaderboard files for local development vs production
+if os.environ.get('FLASK_ENV') == 'development' or os.environ.get('FLASK_DEBUG') == 'True':
+    # Local development - use a separate leaderboard file
+    leaderboard_filename = 'leaderboard_local.json'
+    print(f"Using local leaderboard: {leaderboard_filename}")
+else:
+    # Production - use the main leaderboard file
+    leaderboard_filename = 'leaderboard.json'
+    print(f"Using production leaderboard: {leaderboard_filename}")
+
+leaderboard = Leaderboard(leaderboard_filename)
 
 # Input validation functions
 def validate_uci_move(move):
@@ -180,7 +191,6 @@ def new_puzzle():
         
         # Load puzzles from JSON file
         import json
-        import random
         
         try:
             with open('puzzles_combined.json', 'r') as f:
