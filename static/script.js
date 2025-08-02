@@ -12,6 +12,9 @@ let currentStreak = 0; // Track current streak for leaderboard
 let selectedPiece = null;
 let selectedSquare = null;
 
+// Game state tracking
+let puzzleFailed = false; // Track if current puzzle has been failed
+
 // Global error handler to prevent uncaught exceptions
 window.addEventListener('error', function(e) {
     // Filter out SES-related warnings from browser extensions
@@ -85,7 +88,7 @@ function initializeChessBoard() {
         position: 'start',
         onDrop: onDrop,
         onDragStart: onDragStart,
-        onSquareClick: onSquareClick, // Add click handler
+        // Remove onSquareClick to disable Chessboard2's internal click handling
         pieceTheme: '/static/img/chesspieces/wikipedia',
         orientation: 'white',
         showNotation: true,
@@ -117,6 +120,9 @@ function initializeChessBoard() {
                 setTimeout(function() {
                     forceChessboard2Spacing(calculateBoardSize());
                 }, 100);
+                
+                // Add custom click event listeners to board squares
+                setupCustomClickHandlers();
             }
         }, 200);
     } catch (error) {
@@ -215,7 +221,12 @@ function handleResize() {
 
 function setupEventListeners() {
     $('#new-puzzle-btn').click(function() {
-        loadNewPuzzle();
+        // Check if we need confirmation before loading new puzzle
+        if (currentStreak > 0 && !puzzleFailed) {
+            showConfirmationModal();
+        } else {
+            loadNewPuzzle();
+        }
     });
     
     $('#reset-game-btn').click(function() {
@@ -292,6 +303,27 @@ function setupEventListeners() {
             }
         });
         
+        // Confirmation modal event listeners
+        $('#confirm-reset-btn').click(function() {
+            hideConfirmationModal();
+            // Reset the streak before loading new puzzle
+            currentStreak = 0;
+            $('#consecutive-wins').text('0');
+            showFeedback('Streak reset! Starting fresh... 🔄', 'info');
+            loadNewPuzzle();
+        });
+        
+        $('#cancel-reset-btn').click(function() {
+            hideConfirmationModal();
+        });
+        
+        // Close confirmation modal when clicking outside
+        $('#confirmation-modal').click(function(e) {
+            if (e.target === this) {
+                hideConfirmationModal();
+            }
+        });
+        
         // Handle window resize for responsive chessboard
         $(window).resize(function() {
             handleResize();
@@ -354,11 +386,17 @@ function loadNewPuzzle() {
                     clearHintHighlight();
                     $('#feedback-message').removeClass('show');
                     
-                    // Clear any piece selection for new puzzle
-                    deselectPiece();
-                    
-                    // Update hint button state for new puzzle
-                    updateHintButtonState();
+                                    // Clear any piece selection for new puzzle
+                deselectPiece();
+                
+                // Reset puzzle failed state for new puzzle
+                puzzleFailed = false;
+                
+                // Re-setup custom click handlers for new puzzle
+                setupCustomClickHandlers();
+                
+                // Update hint button state for new puzzle
+                updateHintButtonState();
                     
                     showFeedback('Puzzle loaded! Good luck! 🎯', 'success');
             } else {
@@ -371,20 +409,85 @@ function loadNewPuzzle() {
     });
 }
 
-// Click handler for piece selection and movement
-function onSquareClick(data) {
-    console.log('onSquareClick called:', data);
+// Setup custom click handlers for board squares
+function setupCustomClickHandlers() {
+    console.log('Setting up custom click handlers');
     
-    // Only allow clicking if there's an active puzzle
-    if (!currentPuzzle) {
-        console.log('No active puzzle, clicking disabled');
-        return;
+    // Remove any existing click handlers
+    $('#chessboard').off('click');
+    
+    // Add our own click handler to the entire board
+    $('#chessboard').on('click', function(e) {
+        // Only handle clicks if there's an active puzzle
+        if (!currentPuzzle) {
+            return;
+        }
+        
+        // Get the clicked element
+        const clickedElement = e.target;
+        
+        // Find the square element (Chessboard2 uses specific classes)
+        let squareElement = clickedElement;
+        while (squareElement && !squareElement.classList.contains('square-4b72b')) {
+            squareElement = squareElement.parentElement;
+        }
+        
+        if (!squareElement) {
+            return;
+        }
+        
+        // Extract the square coordinate from the element's data attribute or position
+        const square = getSquareFromElement(squareElement);
+        if (!square) {
+            return;
+        }
+        
+        console.log('Custom click detected on square:', square);
+        
+        // Get the piece on this square
+        const piece = board.getPiece(square);
+        console.log('Piece on square:', piece);
+        
+        // Handle piece selection and movement
+        handleCustomClick(square, piece);
+    });
+}
+
+// Get square coordinate from DOM element
+function getSquareFromElement(element) {
+    // Chessboard2 uses data attributes or we can calculate from position
+    // For now, let's try to extract from the element's class or data attributes
+    const classes = element.className;
+    const squareMatch = classes.match(/square-([a-h][1-8])/);
+    if (squareMatch) {
+        return squareMatch[1];
     }
     
-    const square = data.square;
-    const piece = board.getPiece(square);
+    // Fallback: calculate from position in the board
+    const boardElement = document.getElementById('chessboard');
+    const boardRect = boardElement.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
     
-    console.log('Clicked square:', square, 'Piece:', piece);
+    const x = Math.floor((elementRect.left - boardRect.left) / (boardRect.width / 8));
+    const y = Math.floor((elementRect.top - boardRect.top) / (boardRect.height / 8));
+    
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    
+    if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+        return files[x] + ranks[y];
+    }
+    
+    return null;
+}
+
+// Handle custom click logic
+function handleCustomClick(square, piece) {
+    // Prevent moves if puzzle has failed
+    if (puzzleFailed) {
+        console.log('Click blocked: puzzle has failed');
+        return;
+    }
     
     // If no piece is selected, try to select a piece
     if (!selectedPiece) {
@@ -410,13 +513,7 @@ function onSquareClick(data) {
             deselectPiece();
         } else {
             // Try to move the selected piece to the new square
-            const moveData = {
-                source: selectedSquare,
-                target: square,
-                piece: selectedPiece
-            };
-            
-            console.log('Attempting move:', moveData);
+            console.log('Attempting move from', selectedSquare, 'to', square);
             
             // Check if the move is legal according to chess rules
             const move = game.move({
@@ -471,6 +568,12 @@ function onDragStart(data) {
     // Only allow dragging if there's an active puzzle
     if (!currentPuzzle) {
         console.log('No active puzzle, dragging disabled');
+        return false;
+    }
+    
+    // Prevent dragging if puzzle has failed
+    if (puzzleFailed) {
+        console.log('Dragging blocked: puzzle has failed');
         return false;
     }
     
@@ -550,6 +653,12 @@ function onDrop(data) {
 }
 
 function makeMove(moveUCI) {
+    // Prevent moves if puzzle has failed
+    if (puzzleFailed) {
+        console.log('Move blocked: puzzle has failed');
+        return;
+    }
+    
     $.ajax({
         url: '/api/make-move',
         method: 'POST',
@@ -601,6 +710,7 @@ function makeMove(moveUCI) {
                 }
             } else {
                 // Wrong move - streak is broken
+                puzzleFailed = true; // Mark puzzle as failed
                 const encouragementMessage = getRandomMessage('error');
                 showFeedback(encouragementMessage, 'error');
                 updateStats();
@@ -750,6 +860,7 @@ function resetGame() {
                 hintUsedTotal = false;
                 hintCount = 0; // Reset hint count
                 currentStreak = 0; // Reset current streak
+                puzzleFailed = false; // Reset puzzle failed state
                 
                 // Maintain current mode selection (don't reset to 'easy')
                 $('.btn-mode').removeClass('btn-mode-active btn-mode-disabled');
@@ -1219,6 +1330,20 @@ function showSolutionModal(solutionMoves, description) {
 
 function hideSolutionModal() {
     $('#solution-modal').removeClass('show');
+}
+
+// Confirmation Modal Functions
+function showConfirmationModal() {
+    // Update the message to show current streak
+    const message = `You have a ${currentStreak} consecutive win streak going! Resetting the puzzle will clear your streak. Are you sure you want to do this?`;
+    $('#confirmation-message').text(message);
+    
+    // Show the modal
+    $('#confirmation-modal').addClass('show');
+}
+
+function hideConfirmationModal() {
+    $('#confirmation-modal').removeClass('show');
 }
 
 function convertUCIToSAN(uciMove) {
