@@ -387,9 +387,12 @@ function loadNewPuzzle() {
                     $('#puzzle-description').text(response.description);
                     $('#moves-required').text(`Moves required: ${response.moves_required}`);
                     
-                    // Clear any hint highlighting and persistent messages
+                    // Clear any hint highlighting
                     clearHintHighlight();
-                    $('#feedback-message').removeClass('show');
+                    // Only clear feedback messages that are older than 1 second to avoid interrupting new messages
+                    setTimeout(function() {
+                        $('#feedback-message').removeClass('show');
+                    }, 1000);
                     
                                     // Clear any piece selection for new puzzle
                 deselectPiece();
@@ -819,19 +822,10 @@ function showFeedback(message, type, persistent = false, consecutiveWins = 0) {
     
     // Only auto-hide if not persistent
     if (!persistent) {
-        // Determine display time based on message type
-        let displayTime = 5000; // Default 5 seconds
-        
-        // Check if it's a joke (contains emoji and is success type)
-        if (type === 'success' && (message.includes('😄') || message.includes('😊') || message.includes('😎') || message.includes('🦉') || message.includes('💃') || message.includes('☕') || message.includes('💪'))) {
-            displayTime = 8000; // 8 seconds for jokes
-        } else if (type === 'success') {
-            displayTime = 6000; // 6 seconds for other positive messages
-        }
-        
+        // Use 3 seconds for all messages as requested
         setTimeout(function() {
             feedbackElement.removeClass('show');
-        }, displayTime);
+        }, 3000);
     }
 }
 
@@ -891,9 +885,12 @@ function resetGame() {
                 
                 updateHintButtonState();
                 
-                // Clear any hint highlighting and persistent messages
+                // Clear any hint highlighting
                 clearHintHighlight();
-                $('#feedback-message').removeClass('show');
+                // Only clear feedback messages that are older than 1 second to avoid interrupting new messages
+                setTimeout(function() {
+                    $('#feedback-message').removeClass('show');
+                }, 1000);
                 
                 // Clear any piece selection
                 deselectPiece();
