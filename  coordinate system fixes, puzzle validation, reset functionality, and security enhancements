@@ -1,3 +1,0 @@
-[33mf4fa3c7[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Add flexible move counter for both white and black puzzles
-[33mde15c0b[m Update moves counter to show only remaining white moves
-[33m7de466b[m Initial commit: Chess puzzle web application with Flask and chessboard2

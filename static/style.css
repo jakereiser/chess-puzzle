@@ -695,7 +695,7 @@ header h1 {
     position: relative;
     display: inline-block;
     padding: 0 20px 20px 20px; /* Remove top padding to eliminate white bar */
-    min-height: 500px;
+    min-height: 500px; /* This will be overridden by JavaScript for responsive sizing */
 }
 
 .coordinate-labels .chess-board {
@@ -755,10 +755,30 @@ header h1 {
 
 /* Ensure chessboard has proper dimensions */
 #chessboard {
-    width: 500px !important;
-    height: 500px !important;
-    min-width: 500px;
-    min-height: 500px;
+    width: 500px;
+    height: 500px;
+    min-width: 250px;
+    min-height: 250px;
+}
+
+/* Global override for Chessboard2 notation spacing */
+.notation-files-c3c0a {
+    bottom: -12px !important; /* Reduce from -20px to -12px */
+}
+
+.notation-ranks-d3f97 {
+    right: -10px !important; /* Reduce from -15px to -10px */
+    top: 10px !important; /* Reduce from 15px to 10px */
+}
+
+/* More aggressive override with higher specificity */
+#chessboard .notation-files-c3c0a {
+    bottom: -12px !important; /* Ensure no overlap with higher specificity */
+}
+
+#chessboard .notation-ranks-d3f97 {
+    right: -6px !important; /* Even more aggressive reduction */
+    top: 6px !important; /* Even more aggressive reduction */
 }
 
 /* Mobile-First Responsive Design */
@@ -793,24 +813,34 @@ header h1 {
     
     /* Chess board mobile optimizations - Prevent over-stretching */
     .chess-board-container {
-        width: 100%;
-        max-width: 350px; /* Reduce to prevent stretching */
-        margin: 0 auto;
-        background: transparent;
-        box-shadow: none; /* Remove shadow on mobile for cleaner look */
+        width: 100% !important;
+        max-width: 280px !important; /* Further reduce for mobile */
+        margin: 0 auto !important;
+        background: transparent !important;
+        box-shadow: none !important; /* Remove shadow on mobile for cleaner look */
+        height: auto !important; /* Override fixed height */
+        min-height: auto !important; /* Override fixed min-height */
     }
     
     .chess-board {
         width: 100% !important;
         height: auto !important;
-        max-width: 350px; /* Reduce to prevent stretching */
-        max-height: 350px; /* Reduce to prevent stretching */
-        aspect-ratio: 1; /* Maintain square aspect ratio */
+        max-width: 280px !important; /* Further reduce for mobile */
+        max-height: 280px !important; /* Further reduce for mobile */
+        aspect-ratio: 1 !important; /* Maintain square aspect ratio */
+    }
+    
+    #chessboard {
+        width: 280px !important;
+        height: 280px !important;
+        max-width: 280px !important;
+        max-height: 280px !important;
     }
     
     /* Coordinate labels for mobile */
     .coordinate-labels {
-        padding: 0 15px 15px 15px; /* Restore original padding */
+        padding: 0 15px 8px 15px; /* Reduce bottom padding for mobile */
+        min-height: auto !important; /* Remove fixed min-height for mobile */
     }
     
     .coordinate-left {
@@ -820,9 +850,19 @@ header h1 {
     
     .coordinate-bottom {
         font-size: 10px; /* Restore original size */
-        bottom: -15px; /* Restore original size */
+        bottom: -8px; /* Reduce gap for mobile */
         left: 15px; /* Restore original size */
         width: calc(100% - 30px); /* Restore original size */
+    }
+    
+    /* Override Chessboard2 library spacing */
+    .notation-files-c3c0a {
+        bottom: -10px !important; /* Increase spacing to prevent overlap */
+    }
+    
+    .notation-ranks-d3f97 {
+        right: -8px !important; /* Reduce from -15px to -8px */
+        top: 8px !important; /* Reduce from 15px to 8px */
     }
     
     /* Game stats for mobile */
@@ -911,6 +951,25 @@ header h1 {
     .game-area {
         padding: 20px;
         margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* Reorder puzzle info to appear below mode selector on mobile */
+    .puzzle-info {
+        order: 2; /* Move puzzle info below mode selector */
+    }
+    
+    .game-layout {
+        order: 1; /* Keep mode selector at top */
+    }
+    
+    .controls {
+        order: 3; /* Keep controls at bottom */
+    }
+    
+    .feedback {
+        order: 4; /* Keep feedback at very bottom */
     }
     
     /* Feedback for mobile */
@@ -931,12 +990,49 @@ header h1 {
     }
     
     .chess-board {
-        max-width: 300px; /* Further reduce for very small screens */
-        max-height: 300px; /* Further reduce for very small screens */
+        max-width: 250px !important; /* Further reduce for very small screens */
+        max-height: 250px !important; /* Further reduce for very small screens */
     }
     
     .chess-board-container {
-        max-width: 300px; /* Further reduce for very small screens */
+        max-width: 250px !important; /* Further reduce for very small screens */
+        height: auto !important; /* Override fixed height */
+        min-height: auto !important; /* Override fixed min-height */
+    }
+    
+    #chessboard {
+        width: 250px !important;
+        height: 250px !important;
+        max-width: 250px !important;
+        max-height: 250px !important;
+    }
+    
+    /* Keep original coordinate sizes for very small screens too */
+    .coordinate-labels {
+        padding: 0 15px 6px 15px; /* Reduce bottom padding for very small screens */
+        min-height: auto !important; /* Remove fixed min-height for very small screens */
+    }
+    
+    .coordinate-left {
+        width: 15px; /* Keep original size */
+        font-size: 10px; /* Keep original size */
+    }
+    
+    .coordinate-bottom {
+        font-size: 10px; /* Keep original size */
+        bottom: -8px; /* Reduce gap for very small screens */
+        left: 15px; /* Keep original size */
+        width: calc(100% - 30px); /* Keep original size */
+    }
+    
+    /* Even more aggressive override for very small screens */
+    .notation-files-c3c0a {
+        bottom: -8px !important; /* Ensure no overlap on very small screens */
+    }
+    
+    .notation-ranks-d3f97 {
+        right: -6px !important; /* Further reduce for very small screens */
+        top: 6px !important; /* Further reduce for very small screens */
     }
     
     .btn {

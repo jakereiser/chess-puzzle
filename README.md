@@ -12,7 +12,7 @@ A fun and interactive web-based chess puzzle game that challenges players with r
 - **Three Difficulty Modes** - Easy (unlimited hints), Hard (max 3 hints), and Hikaru (no hints)
 - **Responsive Design** - Works on desktop and mobile
 - **High-Quality Chess Pieces** - Wikipedia-style chess piece images
-- **Rated Puzzles** - Puzzles with difficulty ratings from 400-3050+
+- **Rated Puzzles** - Puzzles with difficulty ratings from 400-3050
 - **Leaderboard System** - Track top 5 highest streaks for all difficulty modes
 
 ## Getting Started
@@ -111,12 +111,11 @@ This creates `puzzles_combined.json` with 5,000 puzzles optimized for performanc
 ## How to Play
 1. Click "New Puzzle" to start a challenge
 2. Make the best moves to solve the puzzle
-3. Use the "💡 Hint" button if you need help - it will highlight the piece to move
+3. Use the hint button if you need help 
 4. **Easy Mode**: Puzzles rated 400-1500 with unlimited hints available
-5. **Hard Mode**: Puzzles rated 1500-2000 with maximum 3 hints (resets streak)
-6. **Hikaru Mode**: Puzzles rated 1800-3050 with no hints allowed - ultimate challenge!
+5. **Hard Mode**: Puzzles rated 1500-2000 with maximum 3 hints
+6. **Hikaru Mode**: Puzzles rated 1800-3050 with no hints allowed!
 7. Solve puzzles to build your streak!
-8. Enjoy the enhanced celebration messages with chess jokes and wisdom!
 
 ## API Endpoints
 - `GET /` - Main game page
@@ -134,6 +133,3 @@ This creates `puzzles_combined.json` with 5,000 puzzles optimized for performanc
 - **Chess Pieces**: Wikipedia-style images from chessboardjs.com
 - **Backend**: Flask with python-chess for game logic
 - **Styling**: Modern CSS with responsive design
-
-## Contributing
-Feel free to contribute to this project by creating issues or pull requests. 

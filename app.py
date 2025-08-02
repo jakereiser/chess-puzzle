@@ -67,25 +67,10 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = os.environ.get('APP_VERSION', '1.8.0')
+APP_VERSION = '1.21.0'  # Force version for testing
 
 # Initialize leaderboard
 leaderboard = Leaderboard()
-
-# Add cache headers for static files
-# @app.after_request
-# def add_cache_headers(response):
-#     """Add cache control headers to responses."""
-#     if request.endpoint == 'static':
-#         # For static files, use cache busting
-#         response.headers['Cache-Control'] = 'public, max-age=3600'  # 1 hour
-#         response.headers['Vary'] = 'Accept-Encoding'
-#     else:
-#         # For dynamic content, prevent caching
-#         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-#         response.headers['Pragma'] = 'no-cache'
-#         response.headers['Expires'] = '0'
-#     return response
 
 # Input validation functions
 def validate_uci_move(move):
@@ -165,6 +150,7 @@ def generate_puzzle_description(original_description, player_color, puzzle_data)
 @app.route('/')
 def index():
     """Main game page."""
+    print(f"DEBUG: APP_VERSION = {APP_VERSION}")  # Debug print
     response = make_response(render_template('index.html', version=APP_VERSION))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'

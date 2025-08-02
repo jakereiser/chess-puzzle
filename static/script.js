@@ -8,6 +8,10 @@ let hintUsedTotal = false; // Track if hint was used in hard mode (one total)
 let hintCount = 0; // Track hint count for hard mode (max 3)
 let currentStreak = 0; // Track current streak for leaderboard
 
+// Click-to-select variables
+let selectedPiece = null;
+let selectedSquare = null;
+
 // Global error handler to prevent uncaught exceptions
 window.addEventListener('error', function(e) {
     // Filter out SES-related warnings from browser extensions
@@ -73,17 +77,23 @@ function initializeChessBoard() {
         return;
     }
     
+    // Calculate responsive board size
+    const boardSize = calculateBoardSize();
+    
     const config = {
         draggable: false, // Start with no dragging until puzzle is loaded
         position: 'start',
         onDrop: onDrop,
         onDragStart: onDragStart,
+        onSquareClick: onSquareClick, // Add click handler
         pieceTheme: '/static/img/chesspieces/wikipedia',
         orientation: 'white',
         showNotation: true,
         moveSpeed: 200,
         snapbackSpeed: 200,
-        trashSpeed: 0 // Hide piece immediately when dragging starts
+        trashSpeed: 0, // Hide piece immediately when dragging starts
+        width: boardSize,
+        height: boardSize
     };
     
     try {
@@ -99,6 +109,14 @@ function initializeChessBoard() {
                 console.log('Setting board position to start');
                 board.setPosition('start');
                 console.log('Board position set successfully');
+                
+                // Force initial resize to ensure proper sizing
+                handleResize();
+                
+                // Also force Chessboard2 spacing override after board is ready
+                setTimeout(function() {
+                    forceChessboard2Spacing(calculateBoardSize());
+                }, 100);
             }
         }, 200);
     } catch (error) {
@@ -106,7 +124,94 @@ function initializeChessBoard() {
     }
 }
 
-// Removed complex styling functions to let chessboard.js handle styling naturally
+// Calculate responsive board size based on screen width
+function calculateBoardSize() {
+    const windowWidth = window.innerWidth;
+    console.log('Window width:', windowWidth);
+    
+    let size;
+    // Desktop: 500px
+    if (windowWidth > 768) {
+        size = 500;
+    }
+    // Tablet: 280px
+    else if (windowWidth > 480) {
+        size = 280;
+    }
+    // Mobile: 250px
+    else {
+        size = 250;
+    }
+    
+    console.log('Calculated board size:', size);
+    return size;
+}
+
+
+
+// Force override Chessboard2 notation spacing with JavaScript
+function forceChessboard2Spacing(boardSize) {
+    // Calculate proportional spacing based on board size
+    const bottomSpacing = Math.max(6, Math.floor(boardSize * 0.02)); // 2% of board size, minimum 6px
+    const sideSpacing = Math.max(4, Math.floor(boardSize * 0.01)); // 1% of board size, minimum 4px
+    
+    // Force override the notation elements directly
+    const notationFiles = document.querySelector('.notation-files-c3c0a');
+    const notationRanks = document.querySelector('.notation-ranks-d3f97');
+    
+    if (notationFiles) {
+        notationFiles.style.bottom = '-' + bottomSpacing + 'px';
+        notationFiles.style.setProperty('bottom', '-' + bottomSpacing + 'px', 'important');
+    }
+    
+    if (notationRanks) {
+        notationRanks.style.right = '-' + sideSpacing + 'px';
+        notationRanks.style.top = sideSpacing + 'px';
+        notationRanks.style.setProperty('right', '-' + sideSpacing + 'px', 'important');
+        notationRanks.style.setProperty('top', sideSpacing + 'px', 'important');
+    }
+    
+    console.log('Forced Chessboard2 spacing:', { bottomSpacing, sideSpacing });
+}
+
+// Handle window resize for responsive chessboard
+function handleResize() {
+    if (board) {
+        const newSize = calculateBoardSize();
+        console.log('Resizing chessboard to:', newSize);
+        
+        // Force resize with explicit dimensions
+        board.resize(newSize, newSize);
+        
+        // Also update the container CSS to ensure it matches
+        const container = document.querySelector('.chess-board-container');
+        if (container) {
+            container.style.width = newSize + 'px';
+            container.style.height = newSize + 'px';
+            container.style.maxWidth = newSize + 'px';
+            container.style.maxHeight = newSize + 'px';
+        }
+        
+        // Update the coordinate labels container to match board size
+        const coordinateLabels = document.querySelector('.coordinate-labels');
+        if (coordinateLabels) {
+            coordinateLabels.style.minHeight = newSize + 'px';
+            coordinateLabels.style.height = newSize + 'px';
+        }
+        
+        // Update the chessboard element itself
+        const chessboardElement = document.getElementById('chessboard');
+        if (chessboardElement) {
+            chessboardElement.style.width = newSize + 'px';
+            chessboardElement.style.height = newSize + 'px';
+        }
+        
+        // Force override Chessboard2 notation spacing
+        forceChessboard2Spacing(newSize);
+        
+
+    }
+}
 
 function setupEventListeners() {
     $('#new-puzzle-btn').click(function() {
@@ -180,13 +285,18 @@ function setupEventListeners() {
         hideSolutionModal();
     });
     
-    // Close solution modal when clicking outside
-    $('#solution-modal').click(function(e) {
-        if (e.target === this) {
-            hideSolutionModal();
-        }
-    });
-}
+            // Close solution modal when clicking outside
+        $('#solution-modal').click(function(e) {
+            if (e.target === this) {
+                hideSolutionModal();
+            }
+        });
+        
+        // Handle window resize for responsive chessboard
+        $(window).resize(function() {
+            handleResize();
+        });
+    }
 
 function loadNewPuzzle() {
     $.ajax({
@@ -244,6 +354,9 @@ function loadNewPuzzle() {
                     clearHintHighlight();
                     $('#feedback-message').removeClass('show');
                     
+                    // Clear any piece selection for new puzzle
+                    deselectPiece();
+                    
                     // Update hint button state for new puzzle
                     updateHintButtonState();
                     
@@ -256,6 +369,100 @@ function loadNewPuzzle() {
             showFeedback('Error loading puzzle. Please try again.', 'error');
         }
     });
+}
+
+// Click handler for piece selection and movement
+function onSquareClick(data) {
+    console.log('onSquareClick called:', data);
+    
+    // Only allow clicking if there's an active puzzle
+    if (!currentPuzzle) {
+        console.log('No active puzzle, clicking disabled');
+        return;
+    }
+    
+    const square = data.square;
+    const piece = board.getPiece(square);
+    
+    console.log('Clicked square:', square, 'Piece:', piece);
+    
+    // If no piece is selected, try to select a piece
+    if (!selectedPiece) {
+        if (piece) {
+            // Check if this is a valid piece for the current player
+            const pieceColor = piece.charAt(0);
+            const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
+            
+            if (pieceColor === expectedColor) {
+                // Select this piece
+                selectedPiece = piece;
+                selectedSquare = square;
+                highlightSquare(square);
+                console.log('Selected piece:', piece, 'on square:', square);
+            } else {
+                console.log('Not a valid piece for current player');
+            }
+        }
+    } else {
+        // A piece is already selected, try to move it
+        if (square === selectedSquare) {
+            // Clicked the same square, deselect
+            deselectPiece();
+        } else {
+            // Try to move the selected piece to the new square
+            const moveData = {
+                source: selectedSquare,
+                target: square,
+                piece: selectedPiece
+            };
+            
+            console.log('Attempting move:', moveData);
+            
+            // Check if the move is legal according to chess rules
+            const move = game.move({
+                from: selectedSquare,
+                to: square,
+                promotion: 'q' // Always promote to queen for simplicity
+            });
+            
+            if (move === null) {
+                console.log('Illegal move, keeping piece selected');
+                // Don't clear selection for illegal moves
+                return;
+            }
+            
+            console.log('Legal move made:', move);
+            
+            // Convert to UCI notation for API
+            let source = selectedSquare;
+            let target = square;
+            
+            console.log('Coordinates being sent to server:', { source: source, target: target });
+            
+            let moveUCI = source + target;
+            if (move.promotion) {
+                moveUCI += move.promotion;
+            }
+            
+            console.log('Sending move to server:', moveUCI);
+            
+            // Clear selection before sending move to server
+            deselectPiece();
+            
+            // Send move to server for puzzle validation
+            makeMove(moveUCI);
+        }
+    }
+}
+
+// Deselect the currently selected piece
+function deselectPiece() {
+    if (selectedSquare) {
+        clearHintHighlight(); // This will clear any highlighting
+        selectedPiece = null;
+        selectedSquare = null;
+        console.log('Piece deselected');
+    }
 }
 
 function onDragStart(data) {
@@ -311,6 +518,10 @@ function onDrop(data) {
                 loadNewPuzzle();
             }
         }
+        
+        // Don't clear selection for illegal moves - let the click handler decide
+        // deselectPiece(); // Removed - handled by click handler
+        
         return 'snapback'; // Illegal move - piece snaps back
     }
     
@@ -557,6 +768,9 @@ function resetGame() {
                 // Clear any hint highlighting and persistent messages
                 clearHintHighlight();
                 $('#feedback-message').removeClass('show');
+                
+                // Clear any piece selection
+                deselectPiece();
                 
                 $('#puzzle-description').text('Ready to start?');
                 $('#moves-required').text('Click "New Puzzle" to begin!');
