@@ -1,0 +1,31 @@
+{
+  "puzzles": [
+    {
+      "id": 1,
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["d2d4", "e5d4", "c4f7"],
+      "description": "White to move and win material",
+      "difficulty": "medium",
+      "rating": 1200,
+      "player_color": "white"
+    },
+    {
+      "id": 2,
+      "fen": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "solution": ["f6e4"],
+      "description": "Black to move and fork the pawns",
+      "difficulty": "easy",
+      "rating": 800,
+      "player_color": "black"
+    },
+    {
+      "id": 3,
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["c4f7", "e8f7", "d2d4"],
+      "description": "White to move and check",
+      "difficulty": "medium",
+      "rating": 1400,
+      "player_color": "white"
+    }
+  ]
+} 
