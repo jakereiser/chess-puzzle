@@ -4,7 +4,8 @@ A fun and interactive web-based chess puzzle game that challenges players with r
 
 ## Features
 - **Massive Puzzle Database** - 10,000+ high-quality puzzles from Lichess
-- **Interactive Chess Board** - Modern chessboard2 library with drag and drop pieces
+- **Interactive Chess Board** - Modern chessboard2 library with dual input methods
+- **Dual Input Methods** - Click to select pieces or drag and drop for movement
 - **Instant Feedback** - Immediate rewards and punishments
 - **Progress Tracking** - Consecutive wins counter
 - **Enhanced Celebration System** - Chess jokes, wisdom, and visual animations
@@ -120,7 +121,9 @@ This creates `puzzles_combined.json` with 5,000 puzzles optimized for performanc
 
 ## How to Play
 1. Click "New Puzzle" to start a challenge
-2. Make the best moves to solve the puzzle
+2. **Move pieces using two methods:**
+   - **Click to Select**: Click a piece to select it (highlighted in green), then click another square to move it
+   - **Drag and Drop**: Click and drag pieces directly to their destination
 3. Use the hint button if you need help 
 4. **Easy Mode**: Puzzles rated 400-1500 with unlimited hints available
 5. **Hard Mode**: Puzzles rated 1500-2000 with maximum 3 hints

@@ -84,11 +84,13 @@ function initializeChessBoard() {
     const boardSize = calculateBoardSize();
     
     const config = {
-        draggable: false, // Start with no dragging until puzzle is loaded
+        draggable: true, // Enable dragging alongside click-to-select
         position: 'start',
         onDrop: onDrop,
         onDragStart: onDragStart,
-        // Remove onSquareClick to disable Chessboard2's internal click handling
+        onMouseoverSquare: onMouseoverSquare,
+        onMouseoutSquare: onMouseoutSquare,
+        onMouseupSquare: onMouseupSquare,
         pieceTheme: '/static/img/chesspieces/wikipedia',
         orientation: 'white',
         showNotation: true,
@@ -370,7 +372,7 @@ function loadNewPuzzle() {
                 // Enable dragging for the puzzle with proper animation settings
                 console.log('Enabling dragging for puzzle');
                 board.config({ 
-                    draggable: true,
+                    draggable: true, // Enable dragging alongside click-to-select functionality
                     moveSpeed: 200,
                     snapbackSpeed: 200,
                     trashSpeed: 0 // Hide piece immediately when dragging starts
@@ -421,57 +423,125 @@ function loadNewPuzzle() {
 function setupCustomClickHandlers() {
     console.log('Setting up custom click handlers');
     
-    // Remove any existing click handlers
-    $('#chessboard').off('click');
+    // Click detection is handled through onDrop callback for pieces
+    // and onMouseupSquare callback for empty squares
+    console.log('Click detection handled through onDrop and onMouseupSquare callbacks');
+}
+
+// Helper function to get square from click event
+function getSquareFromClick(clickedElement, event) {
+    console.log('Getting square from click element:', clickedElement);
     
-    // Add our own click handler to the entire board
-    $('#chessboard').on('click', function(e) {
-        // Only handle clicks if there's an active puzzle
-        if (!currentPuzzle) {
-            return;
+    // Find the square element - Chessboard2 uses different class patterns
+    let squareElement = clickedElement;
+    
+    // First, try to find a parent with a square class
+    while (squareElement && !squareElement.classList.contains('square-4b72b')) {
+        // Also check for other possible square class patterns
+        const classes = squareElement.className || '';
+        if (classes.includes('square-') || classes.includes('chess-square')) {
+            break;
+        }
+        squareElement = squareElement.parentElement;
+    }
+    
+    // If we still haven't found a square element, try a different approach
+    if (!squareElement) {
+        console.log('Trying alternative square detection...');
+        
+        // Look for the closest div that might be a square
+        let currentElement = clickedElement;
+        while (currentElement && currentElement !== document.getElementById('chessboard')) {
+            if (currentElement.tagName === 'DIV' && 
+                (currentElement.className.includes('square') || 
+                 currentElement.style.position === 'absolute' ||
+                 currentElement.style.position === 'relative')) {
+                squareElement = currentElement;
+                break;
+            }
+            currentElement = currentElement.parentElement;
+        }
+    }
+    
+    if (!squareElement) {
+        console.log('No square element found, trying coordinate calculation...');
+        
+        // Fallback: calculate square from click position
+        const boardElement = document.getElementById('chessboard');
+        const boardRect = boardElement.getBoundingClientRect();
+        const clickX = event.clientX - boardRect.left;
+        const clickY = event.clientY - boardRect.top;
+        
+        const squareSize = boardRect.width / 8;
+        const fileIndex = Math.floor(clickX / squareSize);
+        const rankIndex = Math.floor(clickY / squareSize);
+        
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        
+        if (fileIndex >= 0 && fileIndex < 8 && rankIndex >= 0 && rankIndex < 8) {
+            const square = files[fileIndex] + ranks[rankIndex];
+            console.log('Calculated square from click position:', square);
+            return square;
         }
         
-        // Get the clicked element
-        const clickedElement = e.target;
-        
-        // Find the square element (Chessboard2 uses specific classes)
-        let squareElement = clickedElement;
-        while (squareElement && !squareElement.classList.contains('square-4b72b')) {
-            squareElement = squareElement.parentElement;
-        }
-        
-        if (!squareElement) {
-            return;
-        }
-        
-        // Extract the square coordinate from the element's data attribute or position
-        const square = getSquareFromElement(squareElement);
-        if (!square) {
-            return;
-        }
-        
-        console.log('Custom click detected on square:', square);
-        
-        // Get the piece on this square
-        const piece = board.getPiece(square);
-        console.log('Piece on square:', piece);
-        
-        // Handle piece selection and movement
-        handleCustomClick(square, piece);
-    });
+        console.log('Could not determine square coordinate');
+        return null;
+    }
+    
+    console.log('Found square element:', squareElement);
+    
+    // Extract the square coordinate from the element's data attribute or position
+    const square = getSquareFromElement(squareElement);
+    if (!square) {
+        console.log('Could not determine square coordinate');
+        return null;
+    }
+    
+    console.log('Square coordinate determined:', square);
+    return square;
 }
 
 // Get square coordinate from DOM element
 function getSquareFromElement(element) {
-    // Chessboard2 uses data attributes or we can calculate from position
-    // For now, let's try to extract from the element's class or data attributes
+    console.log('getSquareFromElement called with element:', element);
+    console.log('Element classes:', element.className);
+    
+    // Try to get square from data attribute first
+    const squareCoord = element.getAttribute('data-square-coord');
+    if (squareCoord) {
+        console.log('Found square from data attribute:', squareCoord);
+        return squareCoord;
+    }
+    
+    // Try to extract from class name - check multiple patterns
     const classes = element.className;
-    const squareMatch = classes.match(/square-([a-h][1-8])/);
-    if (squareMatch) {
-        return squareMatch[1];
+    console.log('Checking classes for square pattern:', classes);
+    
+    // Try different square class patterns
+    const squarePatterns = [
+        /square-([a-h][1-8])/,  // square-4b72b pattern
+        /chess-square-([a-h][1-8])/,  // chess-square pattern
+        /([a-h][1-8])/  // direct coordinate pattern
+    ];
+    
+    for (const pattern of squarePatterns) {
+        const match = classes.match(pattern);
+        if (match) {
+            console.log('Found square from class pattern:', match[1]);
+            return match[1];
+        }
+    }
+    
+    // Try to get from data attributes
+    const dataSquare = element.getAttribute('data-square');
+    if (dataSquare) {
+        console.log('Found square from data-square attribute:', dataSquare);
+        return dataSquare;
     }
     
     // Fallback: calculate from position in the board
+    console.log('Using position calculation fallback...');
     const boardElement = document.getElementById('chessboard');
     const boardRect = boardElement.getBoundingClientRect();
     const elementRect = element.getBoundingClientRect();
@@ -483,14 +553,28 @@ function getSquareFromElement(element) {
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
     
     if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-        return files[x] + ranks[y];
+        const calculatedSquare = files[x] + ranks[y];
+        console.log('Calculated square from position:', calculatedSquare);
+        return calculatedSquare;
     }
     
+    console.log('Could not determine square coordinate');
     return null;
 }
 
 // Handle custom click logic
 function handleCustomClick(square, piece) {
+    console.log('handleCustomClick called with square:', square, 'piece:', piece);
+    console.log('Current selectedPiece:', selectedPiece, 'selectedSquare:', selectedSquare);
+    console.log('Square type:', typeof square, 'Square value:', square);
+    console.log('Piece type:', typeof piece, 'Piece value:', piece);
+    
+    // Validate square parameter
+    if (!square || typeof square !== 'string' || square.length !== 2) {
+        console.log('Invalid square parameter:', square);
+        return;
+    }
+    
     // Prevent moves if puzzle has failed
     if (puzzleFailed) {
         console.log('Click blocked: puzzle has failed');
@@ -504,20 +588,27 @@ function handleCustomClick(square, piece) {
             const pieceColor = piece.charAt(0);
             const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
             
+            console.log('Piece color:', pieceColor, 'Expected color:', expectedColor);
+            
             if (pieceColor === expectedColor) {
                 // Select this piece
                 selectedPiece = piece;
                 selectedSquare = square;
-                highlightSquare(square);
+                highlightSquare(square, true); // Use selected piece highlighting
                 console.log('Selected piece:', piece, 'on square:', square);
             } else {
-                console.log('Not a valid piece for current player');
+                console.log('Not a valid piece for current player - cannot select opponent piece');
             }
+        } else {
+            console.log('No piece on square:', square);
         }
     } else {
         // A piece is already selected, try to move it
+        console.log('Piece already selected, attempting move or deselect');
+        
         if (square === selectedSquare) {
             // Clicked the same square, deselect
+            console.log('Clicked same square, deselecting');
             deselectPiece();
         } else {
             // Try to move the selected piece to the new square
@@ -531,12 +622,15 @@ function handleCustomClick(square, piece) {
             });
             
             if (move === null) {
-                console.log('Illegal move, keeping piece selected');
-                // Don't clear selection for illegal moves
+                console.log('Illegal move, deselecting piece');
+                deselectPiece(); // Deselect the piece on illegal move
                 return;
             }
             
             console.log('Legal move made:', move);
+            
+            // Manually update the board position since we're not using drag-and-drop
+            board.setPosition(game.fen());
             
             // Convert to UCI notation for API
             let source = selectedSquare;
@@ -562,16 +656,36 @@ function handleCustomClick(square, piece) {
 
 // Deselect the currently selected piece
 function deselectPiece() {
+    console.log('deselectPiece called');
+    console.log('Before deselect - selectedPiece:', selectedPiece, 'selectedSquare:', selectedSquare);
+    
     if (selectedSquare) {
-        clearHintHighlight(); // This will clear any highlighting
+        // Clear the selected piece highlight specifically - use multiple selectors
+        $(`.square-${selectedSquare}`).removeClass('selected-piece');
+        $(`[data-square="${selectedSquare}"]`).removeClass('selected-piece');
+        $(`[data-square-coord="${selectedSquare}"]`).removeClass('selected-piece');
+        // Also remove from any element that might have the class
+        $('.selected-piece').removeClass('selected-piece');
         selectedPiece = null;
         selectedSquare = null;
         console.log('Piece deselected');
+    } else {
+        console.log('No piece was selected to deselect');
     }
 }
 
+// Global variables for click detection
+let clickStartTime = 0;
+let clickStartSquare = null;
+let isDragging = false;
+let dragStartTime = 0;
+
 function onDragStart(data) {
     console.log('onDragStart called:', data);
+    
+    // Record drag start time and square
+    dragStartTime = Date.now();
+    isDragging = true;
     
     // Only allow dragging if there's an active puzzle
     if (!currentPuzzle) {
@@ -585,22 +699,89 @@ function onDragStart(data) {
         return false;
     }
     
-    // Only allow dragging pieces that belong to the current player
+    // For click-to-select: allow clicking on any piece
+    // For drag-and-drop: only allow dragging pieces that belong to the current player
     const pieceColor = data.piece.charAt(0);
     const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
+    
     if (pieceColor !== expectedColor) {
-        console.log(`Not ${currentPuzzle.playerColor} piece, dragging disabled`);
-        return false;
+        console.log(`Not ${currentPuzzle.playerColor} piece, dragging disabled but clicking allowed`);
+        // Allow the drag to start (for click detection) but it will be handled as a click in onDrop
+        return true;
     }
     
     console.log('Dragging allowed for piece:', data.piece, 'from square:', data.square);
     return true;
 }
 
+function onMouseoverSquare(square, piece) {
+    // This can be used for hover effects if needed
+    // console.log('Mouse over square:', square, 'piece:', piece);
+}
+
+function onMouseoutSquare(square, piece) {
+    // This can be used for hover effects if needed
+    // console.log('Mouse out square:', square, 'piece:', piece);
+}
+
+function onMouseupSquare(square, piece) {
+    // Handle clicks on empty squares when a piece is selected
+    if (!currentPuzzle || puzzleFailed) {
+        console.log('onMouseupSquare: No puzzle or puzzle failed');
+        return;
+    }
+    
+    console.log('onMouseupSquare called with square:', square, 'piece:', piece);
+    console.log('Current selectedPiece:', selectedPiece, 'selectedSquare:', selectedSquare);
+    
+    // Extract the actual square string from the data object
+    let actualSquare = square;
+    let actualPiece = piece;
+    
+    // If square is an object (Chessboard2 data), extract the square property
+    if (typeof square === 'object' && square !== null) {
+        actualSquare = square.square;
+        actualPiece = square.piece;
+    }
+    
+    console.log('Extracted square:', actualSquare, 'piece:', actualPiece);
+    
+    // Only handle if we have a piece selected and this is a different square
+    if (selectedPiece && selectedSquare && actualSquare && actualSquare !== selectedSquare) {
+        console.log('Mouse up on square:', actualSquare, 'piece:', actualPiece, 'with selected piece on:', selectedSquare);
+        console.log('About to call handleCustomClick with square:', actualSquare, 'piece:', actualPiece);
+        
+        // Handle as a click for piece movement
+        handleCustomClick(actualSquare, actualPiece);
+    } else {
+        console.log('onMouseupSquare: Conditions not met for handling click');
+        console.log('- selectedPiece:', selectedPiece);
+        console.log('- selectedSquare:', selectedSquare);
+        console.log('- actualSquare:', actualSquare);
+        console.log('- actualSquare !== selectedSquare:', actualSquare !== selectedSquare);
+    }
+}
+
 function onDrop(data) {
     console.log('onDrop called:', data);
     
-    // Check if the move is legal according to chess rules
+    // Reset dragging state
+    isDragging = false;
+    
+    // Handle clicks (same square) and drags (different squares)
+    if (data.source === data.target) {
+        console.log('Click detected - piece dropped on same square');
+        
+        // Get the piece information
+        const position = board.position();
+        const piece = position[data.source] || null;
+        
+        // Handle as a click for piece selection
+        handleCustomClick(data.source, piece);
+        return 'snapback'; // Don't actually move the piece
+    }
+    
+    // This was a real drag - check if the move is legal according to chess rules
     const move = game.move({
         from: data.source,
         to: data.target,
@@ -653,6 +834,9 @@ function onDrop(data) {
     
     console.log('Sending move to server:', moveUCI);
     console.log('Move details:', { source: source, target: target, moveUCI: moveUCI });
+    
+    // Clear any selected piece highlighting when move is made via drag-and-drop
+    deselectPiece();
     
     // Send move to server for puzzle validation
     makeMove(moveUCI);
@@ -1033,24 +1217,42 @@ function getHint() {
     });
 }
 
-function highlightSquare(square) {
+function highlightSquare(square, isSelected = false) {
+    console.log('highlightSquare called with square:', square, 'isSelected:', isSelected);
+    
     // Clear any existing highlights
     clearHintHighlight();
     
-    // Add highlight class to the square
-    const squareElement = $(`.square-${square}`);
+    // Add highlight class to the square - try multiple selectors
+    const squareElement = $(`.square-${square}, [data-square="${square}"], [data-square-coord="${square}"]`);
     if (squareElement.length) {
-        squareElement.addClass('hint-highlight');
-        
-        // Remove highlight after 3 seconds
-        setTimeout(function() {
-            clearHintHighlight();
-        }, 3000);
+        if (isSelected) {
+            squareElement.addClass('selected-piece');
+            console.log('Added selected-piece class to square:', square);
+        } else {
+            squareElement.addClass('hint-highlight');
+            console.log('Added hint-highlight class to square:', square);
+            
+            // Remove hint highlight after 3 seconds
+            setTimeout(function() {
+                clearHintHighlight();
+            }, 3000);
+        }
+    } else {
+        console.log('Square element not found for highlighting:', square);
+        // Try to find any element that might represent this square
+        console.log('Available square elements:', $('[data-square], [data-square-coord], [class*="square-"]').length);
     }
 }
 
 function clearHintHighlight() {
+    console.log('clearHintHighlight called');
+    const hintElements = $('.hint-highlight');
+    const selectedElements = $('.selected-piece');
+    console.log('Clearing highlights - hint elements:', hintElements.length, 'selected elements:', selectedElements.length);
+    
     $('.hint-highlight').removeClass('hint-highlight');
+    $('.selected-piece').removeClass('selected-piece');
 }
 
 // Enhanced celebration messages with chess jokes and positive feedback
