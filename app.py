@@ -69,7 +69,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = '1.26.0'  # Force version for testing
+APP_VERSION = '1.27.0'  # Force version for testing
 
 # Initialize leaderboard with environment-specific filename
 # Use different leaderboard files for local development vs production

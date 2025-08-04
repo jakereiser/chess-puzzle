@@ -412,6 +412,113 @@ function setupCustomClickHandlers() {
     // Click detection is handled through Chessboard2 callbacks:
     // - onDrop for piece clicks (source === target)
     // - onMouseupSquare for empty square clicks when piece is selected
+    
+    // Add mobile touch event handling
+    const chessboardElement = document.getElementById('chessboard');
+    if (chessboardElement) {
+        // Variables to track touch state
+        let touchStartTime = 0;
+        let touchStartSquare = null;
+        let touchStartPiece = null;
+        
+        // Handle touch start
+        chessboardElement.addEventListener('touchstart', function(e) {
+            e.preventDefault(); // Prevent default touch behavior
+            
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            // Find the square element
+            const squareElement = findSquareElement(element);
+            if (squareElement) {
+                const square = getSquareFromElement(squareElement);
+                const piece = getPieceFromElement(squareElement);
+                
+                if (square) {
+                    touchStartTime = Date.now();
+                    touchStartSquare = square;
+                    touchStartPiece = piece;
+                }
+            }
+        }, { passive: false });
+        
+        // Handle touch end
+        chessboardElement.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            
+            const touch = e.changedTouches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            // Find the square element
+            const squareElement = findSquareElement(element);
+            if (squareElement) {
+                const square = getSquareFromElement(squareElement);
+                const piece = getPieceFromElement(squareElement);
+                
+                if (square && touchStartSquare) {
+                    const touchDuration = Date.now() - touchStartTime;
+                    
+                    // Only handle as click if touch duration is short (not a drag)
+                    if (touchDuration < 300) {
+                        // Handle the touch as a click
+                        handleCustomClick(square, piece);
+                    }
+                    
+                    // Reset touch state
+                    touchStartTime = 0;
+                    touchStartSquare = null;
+                    touchStartPiece = null;
+                }
+            }
+        }, { passive: false });
+    }
+}
+
+// Helper functions for mobile touch handling
+function findSquareElement(element) {
+    // Traverse up the DOM to find a square element
+    let current = element;
+    while (current && current !== document.body) {
+        if (current.classList.contains('square-55d63') || 
+            current.hasAttribute('data-square') ||
+            current.classList.contains('square')) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
+function getSquareFromElement(element) {
+    // Try to get square from data attribute
+    if (element.hasAttribute('data-square')) {
+        return element.getAttribute('data-square');
+    }
+    
+    // Try to get from class name (Chessboard2 format)
+    const classes = element.className.split(' ');
+    for (let className of classes) {
+        if (className.startsWith('square-') && className.length === 9) {
+            return className.substring(7, 9); // Extract square from "square-55d63"
+        }
+    }
+    
+    return null;
+}
+
+function getPieceFromElement(element) {
+    // Check if there's a piece image in this element
+    const pieceImg = element.querySelector('img');
+    if (pieceImg) {
+        // Extract piece info from the image src or alt attribute
+        const src = pieceImg.src;
+        if (src.includes('wikipedia')) {
+            // Extract piece type from filename (e.g., "wK.png" -> "wK")
+            const filename = src.split('/').pop();
+            return filename.replace('.png', '');
+        }
+    }
+    return null;
 }
 
 
@@ -562,6 +669,8 @@ function onMouseupSquare(square, piece) {
         handleCustomClick(actualSquare, actualPiece);
     }
 }
+
+
 
 function onDrop(data) {
     // Reset dragging state
@@ -979,6 +1088,9 @@ function getHint() {
         method: 'POST',
         success: function(response) {
             if (response.success) {
+                // Deselect any currently selected piece before showing hint
+                deselectPiece();
+                
                 showFeedback(response.message, 'success', true); // Persistent message
                 highlightSquare(response.hint_square);
                 
@@ -998,28 +1110,33 @@ function getHint() {
 }
 
 function highlightSquare(square, isSelected = false) {
-    // Clear any existing highlights
-    clearHintHighlight();
-    
     // Add highlight class to the square - try multiple selectors
     const squareElement = $(`.square-${square}, [data-square="${square}"], [data-square-coord="${square}"]`);
     if (squareElement.length) {
         if (isSelected) {
+            // For selection, clear hint highlight first, then add selection highlight
+            squareElement.removeClass('hint-highlight');
             squareElement.addClass('selected-piece');
         } else {
-            squareElement.addClass('hint-highlight');
-            
-            // Remove hint highlight after 3 seconds
-            setTimeout(function() {
-                clearHintHighlight();
-            }, 3000);
+            // For hint highlighting, only add if no piece is currently selected
+            if (!selectedPiece) {
+                squareElement.addClass('hint-highlight');
+                
+                // Remove hint highlight after 3 seconds
+                setTimeout(function() {
+                    // Only clear hint highlight if no piece is selected
+                    if (!selectedPiece) {
+                        squareElement.removeClass('hint-highlight');
+                    }
+                }, 3000);
+            }
         }
     }
 }
 
 function clearHintHighlight() {
+    // Only clear hint highlights, don't clear selected piece highlights
     $('.hint-highlight').removeClass('hint-highlight');
-    $('.selected-piece').removeClass('selected-piece');
 }
 
 // Enhanced celebration messages with chess jokes and positive feedback
