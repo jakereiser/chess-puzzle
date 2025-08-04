@@ -175,8 +175,9 @@ class Leaderboard:
         # Add to appropriate leaderboard
         self.leaderboard[mode].append(score_entry)
         
-        # Sort by score (highest first)
-        self.leaderboard[mode].sort(key=lambda x: x['score'], reverse=True)
+        # Sort by score (highest first), then by timestamp (earliest first for ties)
+        # This ensures that when scores are tied, the first person to achieve that score gets the higher rank
+        self.leaderboard[mode].sort(key=lambda x: (x['score'], -x['timestamp']), reverse=True)
         
         # Keep only top 5 scores
         self.leaderboard[mode] = self.leaderboard[mode][:5]
@@ -185,7 +186,7 @@ class Leaderboard:
         self._save_leaderboard()
         
         # Check if this is a new high score
-        position = self._get_score_position(mode, score)
+        position = self._get_score_position(mode, score, score_entry['timestamp'])
         is_new_high_score = position == 1
         
         return {
@@ -194,10 +195,21 @@ class Leaderboard:
             'top_scores': self.get_top_scores(mode)
         }
     
-    def _get_score_position(self, mode: str, score: int) -> int:
-        """Get the position of a score in the leaderboard."""
+    def _get_score_position(self, mode: str, score: int, timestamp: float = None) -> int:
+        """
+        Get the position of a score in the leaderboard.
+        For tied scores, earlier timestamps get higher positions.
+        """
+        if timestamp is None:
+            # If no timestamp provided, find the position of the first occurrence of this score
+            for i, entry in enumerate(self.leaderboard[mode]):
+                if entry['score'] == score:
+                    return i + 1
+            return len(self.leaderboard[mode]) + 1
+        
+        # Find the position based on the specific timestamp
         for i, entry in enumerate(self.leaderboard[mode]):
-            if entry['score'] == score:
+            if entry['score'] == score and entry['timestamp'] == timestamp:
                 return i + 1
         return len(self.leaderboard[mode]) + 1
     

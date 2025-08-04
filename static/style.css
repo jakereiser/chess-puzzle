@@ -905,7 +905,7 @@ header h1 {
     
     /* Coordinate labels for mobile */
     .coordinate-labels {
-        padding: 0 15px 8px 15px; /* Reduce bottom padding for mobile */
+        padding: 0 15px 18px 15px; /* Increase bottom padding for mobile to prevent overlap */
         min-height: auto !important; /* Remove fixed min-height for mobile */
     }
     
@@ -916,7 +916,7 @@ header h1 {
     
     .coordinate-bottom {
         font-size: 10px; /* Restore original size */
-        bottom: -8px; /* Reduce gap for mobile */
+        bottom: -18px; /* Increase gap for mobile to prevent overlap */
         left: 15px; /* Restore original size */
         width: calc(100% - 30px); /* Restore original size */
     }
@@ -1075,7 +1075,7 @@ header h1 {
     
     /* Keep original coordinate sizes for very small screens too */
     .coordinate-labels {
-        padding: 0 15px 6px 15px; /* Reduce bottom padding for very small screens */
+        padding: 0 15px 18px 15px; /* Increase bottom padding for very small screens to prevent overlap */
         min-height: auto !important; /* Remove fixed min-height for very small screens */
     }
     
@@ -1086,7 +1086,7 @@ header h1 {
     
     .coordinate-bottom {
         font-size: 10px; /* Keep original size */
-        bottom: -8px; /* Reduce gap for very small screens */
+        bottom: -18px; /* Increase gap for very small screens to prevent overlap */
         left: 15px; /* Keep original size */
         width: calc(100% - 30px); /* Keep original size */
     }
@@ -1113,6 +1113,27 @@ header h1 {
     
     .puzzle-info h2 {
         font-size: 1.1rem;
+    }
+}
+
+/* Narrow browser window fix - when width is below 770px but not mobile */
+@media (max-width: 770px) and (min-width: 481px) {
+    .coordinate-bottom {
+        bottom: -35px !important; /* Increase gap to prevent overlap */
+    }
+    
+    .coordinate-labels {
+        padding: 0 20px 35px 20px !important; /* Increase bottom padding */
+    }
+    
+    /* Ensure chessboard2 notation doesn't overlap */
+    .notation-files-c3c0a {
+        bottom: -25px !important; /* Increase spacing for narrow windows */
+    }
+    
+    .notation-ranks-d3f97 {
+        right: -12px !important; /* Slightly reduce for narrow windows */
+        top: 12px !important; /* Slightly reduce for narrow windows */
     }
 }
 
