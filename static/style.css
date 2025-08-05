@@ -1166,6 +1166,18 @@ header h1 {
     .chess-board {
         touch-action: manipulation; /* Optimize for touch */
     }
+    
+    /* Ensure chess squares are properly sized for touch */
+    .chess-board .square-55d63 {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* Improve touch responsiveness */
+    .chess-board img {
+        pointer-events: auto;
+        touch-action: manipulation;
+    }
 }
 
 /* Footer styling */

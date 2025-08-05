@@ -59,5 +59,6 @@ s-puzzle
 
 # Local development files
 leaderboard_local.json
+leaderboard.json
 *.backup
 *.emergency 

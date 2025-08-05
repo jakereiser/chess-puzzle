@@ -96,7 +96,13 @@ function initializeChessBoard() {
         snapbackSpeed: 200,
         trashSpeed: 0, // Hide piece immediately when dragging starts
         width: boardSize,
-        height: boardSize
+        height: boardSize,
+        // Mobile-specific settings
+        showErrors: false,
+        trashSpeed: 0,
+        appearSpeed: 200,
+        moveSpeed: 200,
+        snapbackSpeed: 200
     };
     
     try {
@@ -219,6 +225,21 @@ function setupEventListeners() {
             loadNewPuzzle();
         }
     });
+    
+    // Add debug button for testing
+    if (typeof $ !== 'undefined') {
+        $('<button id="debug-btn" class="btn btn-secondary" style="margin-left: 10px;">Debug Board</button>').insertAfter('#reset-game-btn');
+        $('#debug-btn').click(function() {
+            console.log('=== DEBUG BOARD STATE ===');
+            console.log('Current puzzle:', currentPuzzle);
+            console.log('Selected piece:', selectedPiece);
+            console.log('Selected square:', selectedSquare);
+            console.log('Game state:', game ? game.fen() : 'No game');
+            console.log('Board position:', board ? board.position() : 'No board');
+            console.log('Is mobile device:', 'ontouchstart' in window);
+            console.log('========================');
+        });
+    }
     
     $('#reset-game-btn').click(function() {
         resetGame();
@@ -345,46 +366,70 @@ function loadNewPuzzle() {
                 
                 // Update the board position to the scrambled puzzle
                 game = new Chess(response.fen);
-                board.setPosition(response.fen);
+                
+                // Add safety check before setting board position
+                if (board && typeof board.setPosition === 'function') {
+                    try {
+                        board.setPosition(response.fen);
+                    } catch (error) {
+                        console.warn('Error setting board position:', error);
+                        // Retry after a short delay
+                        setTimeout(function() {
+                            if (board && typeof board.setPosition === 'function') {
+                                try {
+                                    board.setPosition(response.fen);
+                                } catch (retryError) {
+                                    console.warn('Retry failed:', retryError);
+                                }
+                            }
+                        }, 100);
+                    }
+                }
                 
                 // Set board orientation based on player color
                 if (response.player_color === 'black') {
-                    board.config({ orientation: 'black' });
+                    if (board && typeof board.config === 'function') {
+                        board.config({ orientation: 'black' });
+                    }
                     // Flip coordinate labels for black orientation
                     flipCoordinateLabels();
                 } else {
-                    board.config({ orientation: 'white' });
+                    if (board && typeof board.config === 'function') {
+                        board.config({ orientation: 'white' });
+                    }
                     // Reset coordinate labels for white orientation
                     resetCoordinateLabels();
                 }
                 
                 // Enable dragging for the puzzle with proper animation settings
-                board.config({ 
-                    draggable: true, // Enable dragging alongside click-to-select functionality
-                    moveSpeed: 200,
-                    snapbackSpeed: 200,
-                    trashSpeed: 0 // Hide piece immediately when dragging starts
-                });
+                if (board && typeof board.config === 'function') {
+                    board.config({ 
+                        draggable: true, // Enable dragging alongside click-to-select functionality
+                        moveSpeed: 200,
+                        snapbackSpeed: 200,
+                        trashSpeed: 0 // Hide piece immediately when dragging starts
+                    });
+                }
                 
                 // Ensure board is properly sized after position change
                 setTimeout(function() {
                     if (board) {
                         // Board updated
                     }
-                }, 50);
+                }, 100); // Increased delay for better stability
                 
-                                    // Update UI
-                    $('#puzzle-description').text(response.description);
-                    $('#moves-required').text(`Moves required: ${response.moves_required}`);
-                    
-                    // Clear any hint highlighting
-                    clearHintHighlight();
-                    // Only clear feedback messages that are older than 1 second to avoid interrupting new messages
-                    setTimeout(function() {
-                        $('#feedback-message').removeClass('show');
-                    }, 1000);
-                    
-                                    // Clear any piece selection for new puzzle
+                // Update UI
+                $('#puzzle-description').text(response.description);
+                $('#moves-required').text(`Moves required: ${response.moves_required}`);
+                
+                // Clear any hint highlighting
+                clearHintHighlight();
+                // Only clear feedback messages that are older than 1 second to avoid interrupting new messages
+                setTimeout(function() {
+                    $('#feedback-message').removeClass('show');
+                }, 1000);
+                
+                // Clear any piece selection for new puzzle
                 deselectPiece();
                 
                 // Reset puzzle failed state for new puzzle
@@ -396,7 +441,7 @@ function loadNewPuzzle() {
                 // Update hint button state for new puzzle
                 updateHintButtonState();
                     
-                    showFeedback('Puzzle loaded! Good luck! 🎯', 'success');
+                showFeedback('Puzzle loaded! Good luck! 🎯', 'success');
             } else {
                 showFeedback('Failed to load puzzle. Try again!', 'error');
             }
@@ -409,6 +454,8 @@ function loadNewPuzzle() {
 
 // Setup custom click handlers for board squares
 function setupCustomClickHandlers() {
+    console.log('Setting up custom click handlers...');
+    
     // Click detection is handled through Chessboard2 callbacks:
     // - onDrop for piece clicks (source === target)
     // - onMouseupSquare for empty square clicks when piece is selected
@@ -416,119 +463,347 @@ function setupCustomClickHandlers() {
     // Add mobile touch event handling
     const chessboardElement = document.getElementById('chessboard');
     if (chessboardElement) {
+        console.log('Chessboard element found, setting up touch handlers');
+        
         // Variables to track touch state
         let touchStartTime = 0;
         let touchStartSquare = null;
         let touchStartPiece = null;
+        let touchMoved = false;
         
         // Handle touch start
         chessboardElement.addEventListener('touchstart', function(e) {
+            console.log('Touch start event triggered');
             e.preventDefault(); // Prevent default touch behavior
             
             const touch = e.touches[0];
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            console.log('Touch coordinates:', touch.clientX, touch.clientY);
             
-            // Find the square element
-            const squareElement = findSquareElement(element);
+            // Try to find the actual square element more accurately
+            const squareElement = findSquareElementAtCoordinates(touch.clientX, touch.clientY);
+            console.log('Square element found:', squareElement);
+            
             if (squareElement) {
                 const square = getSquareFromElement(squareElement);
                 const piece = getPieceFromElement(squareElement);
+                
+                console.log('Square:', square, 'Piece:', piece);
                 
                 if (square) {
                     touchStartTime = Date.now();
                     touchStartSquare = square;
                     touchStartPiece = piece;
+                    touchMoved = false;
+                    console.log('Touch start on square:', square, 'piece:', piece);
                 }
+            }
+        }, { passive: false });
+        
+        // Handle touch move to detect if user is dragging
+        chessboardElement.addEventListener('touchmove', function(e) {
+            if (touchStartTime > 0) {
+                touchMoved = true;
+                console.log('Touch moved - treating as drag');
             }
         }, { passive: false });
         
         // Handle touch end
         chessboardElement.addEventListener('touchend', function(e) {
+            console.log('Touch end event triggered');
             e.preventDefault();
             
-            const touch = e.changedTouches[0];
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            // Find the square element
-            const squareElement = findSquareElement(element);
-            if (squareElement) {
-                const square = getSquareFromElement(squareElement);
-                const piece = getPieceFromElement(squareElement);
+            if (touchStartTime > 0 && !touchMoved) {
+                const touch = e.changedTouches[0];
+                console.log('Touch end coordinates:', touch.clientX, touch.clientY);
                 
-                if (square && touchStartSquare) {
-                    const touchDuration = Date.now() - touchStartTime;
+                // Try to find the actual square element more accurately
+                const squareElement = findSquareElementAtCoordinates(touch.clientX, touch.clientY);
+                console.log('Square element at touch end:', squareElement);
+                
+                if (squareElement) {
+                    const square = getSquareFromElement(squareElement);
+                    const piece = getPieceFromElement(squareElement);
                     
-                    // Only handle as click if touch duration is short (not a drag)
-                    if (touchDuration < 300) {
-                        // Handle the touch as a click
+                    console.log('Touch end - Square:', square, 'Piece:', piece);
+                    
+                    if (square && touchStartSquare) {
+                        const touchDuration = Date.now() - touchStartTime;
+                        console.log('Touch duration:', touchDuration, 'ms');
+                        
+                        // Only handle as click if touch duration is short (not a drag)
+                        if (touchDuration < 300) {
+                            console.log('Touch end - handling as click on square:', square, 'piece:', piece);
+                            // Handle the touch as a click
+                            handleCustomClick(square, piece);
+                        } else {
+                            console.log('Touch duration too long, ignoring');
+                        }
+                    }
+                } else {
+                    // Fallback: try to use the board's position to determine the square
+                    console.log('No square element found, trying fallback approach');
+                    const boardRect = chessboardElement.getBoundingClientRect();
+                    const x = touch.clientX - boardRect.left;
+                    const y = touch.clientY - boardRect.top;
+                    const squareSize = boardRect.width / 8;
+                    const file = Math.floor(x / squareSize);
+                    const rank = 7 - Math.floor(y / squareSize); // Flip for chess coordinates
+                    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                    const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+                    
+                    if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+                        const square = files[file] + ranks[rank];
+                        const position = board.position();
+                        const piece = position[square] || null;
+                        
+                        console.log('Fallback - calculated square:', square, 'piece:', piece);
                         handleCustomClick(square, piece);
                     }
-                    
-                    // Reset touch state
-                    touchStartTime = 0;
-                    touchStartSquare = null;
-                    touchStartPiece = null;
                 }
             }
+            
+            // Reset touch state
+            touchStartTime = 0;
+            touchStartSquare = null;
+            touchStartPiece = null;
+            touchMoved = false;
         }, { passive: false });
+        
+        // Add click event listener as fallback for mobile devices
+        chessboardElement.addEventListener('click', function(e) {
+            console.log('Click event triggered on chessboard');
+            // Only handle if this is a mobile device and touch events might not work
+            if ('ontouchstart' in window) {
+                console.log('Mobile device detected, using click fallback');
+                const element = e.target;
+                console.log('Click target element:', element);
+                
+                const squareElement = findSquareElement(element);
+                console.log('Square element from click:', squareElement);
+                
+                if (squareElement) {
+                    const square = getSquareFromElement(squareElement);
+                    const piece = getPieceFromElement(squareElement);
+                    
+                    console.log('Click fallback on square:', square, 'piece:', piece);
+                    if (square) {
+                        handleCustomClick(square, piece);
+                    }
+                }
+            }
+        });
+        
+        // Also add mousedown/mouseup events as additional fallback
+        chessboardElement.addEventListener('mousedown', function(e) {
+            console.log('Mouse down event on chessboard');
+            if ('ontouchstart' in window) {
+                const element = e.target;
+                const squareElement = findSquareElement(element);
+                if (squareElement) {
+                    const square = getSquareFromElement(squareElement);
+                    const piece = getPieceFromElement(squareElement);
+                    console.log('Mouse down on square:', square, 'piece:', piece);
+                }
+            }
+        });
+        
+        chessboardElement.addEventListener('mouseup', function(e) {
+            console.log('Mouse up event on chessboard');
+            if ('ontouchstart' in window) {
+                const element = e.target;
+                const squareElement = findSquareElement(element);
+                if (squareElement) {
+                    const square = getSquareFromElement(squareElement);
+                    const piece = getPieceFromElement(squareElement);
+                    console.log('Mouse up on square:', square, 'piece:', piece);
+                    if (square) {
+                        handleCustomClick(square, piece);
+                    }
+                }
+            }
+        });
+    } else {
+        console.error('Chessboard element not found!');
     }
 }
 
 // Helper functions for mobile touch handling
 function findSquareElement(element) {
+    console.log('findSquareElement called with:', element);
+    
     // Traverse up the DOM to find a square element
     let current = element;
-    while (current && current !== document.body) {
+    let depth = 0;
+    while (current && current !== document.body && depth < 10) {
+        console.log('Checking element at depth', depth, ':', current.tagName, 'classes:', current.className);
+        
         if (current.classList.contains('square-55d63') || 
             current.hasAttribute('data-square') ||
             current.classList.contains('square')) {
+            console.log('Found square element:', current);
             return current;
         }
+        
+        // Also check for Chessboard2 specific square classes
+        const classes = current.className.split(' ');
+        for (let className of classes) {
+            // Look for square-XXXXX pattern (where XXXXX is any 4-6 characters)
+            if (className.startsWith('square-') && (className.length >= 10 && className.length <= 12)) {
+                console.log('Found square element by class:', current);
+                return current;
+            }
+        }
         current = current.parentElement;
+        depth++;
     }
+    console.log('No square element found');
+    return null;
+}
+
+// New function to find square element at specific coordinates
+function findSquareElementAtCoordinates(x, y) {
+    console.log('Finding square element at coordinates:', x, y);
+    
+    // Get all elements at the point
+    const elements = document.elementsFromPoint(x, y);
+    console.log('All elements at point:', elements);
+    
+    // Look for square elements in the list
+    for (let element of elements) {
+        console.log('Checking element:', element.tagName, 'classes:', element.className);
+        
+        // Check if this is a chess square element
+        if (element.classList.contains('square-55d63') || 
+            element.hasAttribute('data-square') ||
+            element.classList.contains('square')) {
+            console.log('Found square element:', element);
+            return element;
+        }
+        
+        // Also check for Chessboard2 specific square classes
+        const classes = element.className.split(' ');
+        for (let className of classes) {
+            console.log('Checking class:', className, 'length:', className.length);
+            // Look for square-XXXXX pattern (where XXXXX is any 4-6 characters)
+            if (className.startsWith('square-') && (className.length >= 10 && className.length <= 12)) {
+                console.log('Found square element by class:', element);
+                return element;
+            }
+        }
+    }
+    
+    console.log('No square element found at coordinates');
     return null;
 }
 
 function getSquareFromElement(element) {
-    // Try to get square from data attribute
+    console.log('getSquareFromElement called with:', element);
+    
+    // Try to get square from data-square-coord attribute first (new Chessboard2 format)
+    if (element.hasAttribute('data-square-coord')) {
+        const square = element.getAttribute('data-square-coord');
+        console.log('Found square from data-square-coord:', square);
+        return square;
+    }
+    
+    // Try to get square from data-square attribute (old format)
     if (element.hasAttribute('data-square')) {
-        return element.getAttribute('data-square');
+        const square = element.getAttribute('data-square');
+        console.log('Found square from data-square:', square);
+        return square;
     }
     
     // Try to get from class name (Chessboard2 format)
     const classes = element.className.split(' ');
     for (let className of classes) {
         if (className.startsWith('square-') && className.length === 9) {
-            return className.substring(7, 9); // Extract square from "square-55d63"
+            const square = className.substring(7, 9); // Extract square from "square-55d63"
+            console.log('Found square from class name:', square);
+            return square;
         }
     }
     
+    // Try to get from parent elements that might have the square data
+    let parent = element.parentElement;
+    while (parent && parent !== document.body) {
+        if (parent.hasAttribute('data-square-coord')) {
+            const square = parent.getAttribute('data-square-coord');
+            console.log('Found square from parent data-square-coord:', square);
+            return square;
+        }
+        if (parent.hasAttribute('data-square')) {
+            const square = parent.getAttribute('data-square');
+            console.log('Found square from parent data-square:', square);
+            return square;
+        }
+        const parentClasses = parent.className.split(' ');
+        for (let className of parentClasses) {
+            if (className.startsWith('square-') && className.length === 9) {
+                const square = className.substring(7, 9);
+                console.log('Found square from parent class name:', square);
+                return square;
+            }
+        }
+        parent = parent.parentElement;
+    }
+    
+    console.log('No square found in element');
     return null;
 }
 
 function getPieceFromElement(element) {
+    console.log('getPieceFromElement called with:', element);
+    
     // Check if there's a piece image in this element
     const pieceImg = element.querySelector('img');
     if (pieceImg) {
         // Extract piece info from the image src or alt attribute
         const src = pieceImg.src;
+        console.log('Found piece image with src:', src);
         if (src.includes('wikipedia')) {
             // Extract piece type from filename (e.g., "wK.png" -> "wK")
             const filename = src.split('/').pop();
-            return filename.replace('.png', '');
+            const piece = filename.replace('.png', '');
+            console.log('Extracted piece from filename:', piece);
+            return piece;
         }
     }
+    
+    // Also check parent elements for piece images
+    let parent = element.parentElement;
+    while (parent && parent !== document.body) {
+        const pieceImg = parent.querySelector('img');
+        if (pieceImg) {
+            const src = pieceImg.src;
+            console.log('Found piece image in parent with src:', src);
+            if (src.includes('wikipedia')) {
+                const filename = src.split('/').pop();
+                const piece = filename.replace('.png', '');
+                console.log('Extracted piece from parent filename:', piece);
+                return piece;
+            }
+        }
+        parent = parent.parentElement;
+    }
+    
+    // If no piece image found, try to get piece from board position
+    const square = getSquareFromElement(element);
+    if (square && board && board.position) {
+        const position = board.position();
+        const piece = position[square] || null;
+        console.log('Got piece from board position for square', square, ':', piece);
+        return piece;
+    }
+    
+    console.log('No piece found in element');
     return null;
 }
-
-
-
-
 
 // Handle custom click logic
 function handleCustomClick(square, piece) {
     // Validate square parameter
     if (!square || typeof square !== 'string' || square.length !== 2) {
+        console.log('Invalid square:', square);
         return;
     }
     
@@ -537,6 +812,8 @@ function handleCustomClick(square, piece) {
         return;
     }
     
+    console.log('handleCustomClick called with square:', square, 'piece:', piece);
+    
     // If no piece is selected, try to select a piece
     if (!selectedPiece) {
         if (piece) {
@@ -544,49 +821,42 @@ function handleCustomClick(square, piece) {
             const pieceColor = piece.charAt(0);
             const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
             
+            console.log('Piece color:', pieceColor, 'Expected color:', expectedColor);
+            
             if (pieceColor === expectedColor) {
                 // Select this piece
                 selectedPiece = piece;
                 selectedSquare = square;
                 highlightSquare(square, true); // Use selected piece highlighting
+                console.log('Piece selected:', piece, 'on square:', square);
+            } else {
+                console.log('Invalid piece color for current player');
             }
+        } else {
+            console.log('No piece on square:', square);
         }
     } else {
         // A piece is already selected, try to move it
         if (square === selectedSquare) {
             // Clicked the same square, deselect
+            console.log('Deselecting piece on same square');
             deselectPiece();
         } else {
             // Try to move the selected piece to the new square
-            // Check if the move is legal according to chess rules
-            const move = game.move({
-                from: selectedSquare,
-                to: square,
-                promotion: 'q' // Always promote to queen for simplicity
-            });
+            console.log('Attempting move from', selectedSquare, 'to', square);
             
-            if (move === null) {
-                deselectPiece(); // Deselect the piece on illegal move
-                return;
-            }
+            // Use the same logic as onDrop - create a fake drop data object
+            const dropData = {
+                source: selectedSquare,
+                target: square,
+                piece: selectedPiece
+            };
             
-            // Manually update the board position since we're not using drag-and-drop
-            board.setPosition(game.fen());
+            // Call onDrop with the fake data to use the same move logic
+            const result = onDrop(dropData);
             
-            // Convert to UCI notation for API
-            let source = selectedSquare;
-            let target = square;
-            
-            let moveUCI = source + target;
-            if (move.promotion) {
-                moveUCI += move.promotion;
-            }
-            
-            // Clear selection before sending move to server
+            // Clear selection after the move attempt
             deselectPiece();
-            
-            // Send move to server for puzzle validation
-            makeMove(moveUCI);
         }
     }
 }
@@ -650,6 +920,7 @@ function onMouseoutSquare(square, piece) {
 function onMouseupSquare(square, piece) {
     // Handle clicks on empty squares when a piece is selected
     if (!currentPuzzle || puzzleFailed) {
+        console.log('onMouseupSquare: No current puzzle or puzzle failed');
         return;
     }
     
@@ -663,10 +934,28 @@ function onMouseupSquare(square, piece) {
         actualPiece = square.piece;
     }
     
-    // Only handle if we have a piece selected and this is a different square
-    if (selectedPiece && selectedSquare && actualSquare && actualSquare !== selectedSquare) {
-        // Handle as a click for piece movement
+    console.log('onMouseupSquare called with square:', actualSquare, 'piece:', actualPiece);
+    console.log('Current selected piece:', selectedPiece, 'on square:', selectedSquare);
+    
+    // Handle all cases for mobile compatibility
+    if (selectedPiece && selectedSquare) {
+        // We have a piece selected
+        if (actualSquare === selectedSquare) {
+            // Clicked the same square, deselect
+            console.log('Clicked same square, deselecting');
+            deselectPiece();
+        } else if (actualSquare) {
+            // Clicked a different square, try to move
+            console.log('Attempting move from', selectedSquare, 'to', actualSquare);
+            handleCustomClick(actualSquare, actualPiece);
+        }
+    } else if (actualPiece) {
+        // No piece selected, but clicked on a piece - select it
+        console.log('No piece selected, selecting piece on', actualSquare);
         handleCustomClick(actualSquare, actualPiece);
+    } else if (actualSquare) {
+        // No piece selected, clicked on empty square - do nothing
+        console.log('Clicked on empty square', actualSquare, 'with no piece selected');
     }
 }
 
@@ -676,11 +965,15 @@ function onDrop(data) {
     // Reset dragging state
     isDragging = false;
     
+    console.log('onDrop called with source:', data.source, 'target:', data.target);
+    
     // Handle clicks (same square) and drags (different squares)
     if (data.source === data.target) {
         // Get the piece information
         const position = board.position();
         const piece = position[data.source] || null;
+        
+        console.log('Same square click detected, piece:', piece);
         
         // Handle as a click for piece selection
         handleCustomClick(data.source, piece);
@@ -780,8 +1073,14 @@ function makeMove(moveUCI) {
                         // Update the chess.js game state
                         game = new Chess(response.current_fen);
                         
-                        // Update the board display
-                        board.setPosition(response.current_fen);
+                        // Update the board display with safety check
+                        if (board && typeof board.setPosition === 'function') {
+                            try {
+                                board.setPosition(response.current_fen);
+                            } catch (error) {
+                                console.warn('Error updating board after black move:', error);
+                            }
+                        }
                         
                         // Update the current puzzle FEN
                         if (currentPuzzle) {
@@ -928,11 +1227,19 @@ function resetGame() {
                 
                 // Reset the board to standard starting position
                 game = new Chess();
-                board.setPosition('start');
-                board.config({ 
-                    draggable: false, // Disable dragging
-                    orientation: 'white' // Reset to white orientation
-                });
+                if (board && typeof board.setPosition === 'function') {
+                    try {
+                        board.setPosition('start');
+                    } catch (error) {
+                        console.warn('Error resetting board position:', error);
+                    }
+                }
+                if (board && typeof board.config === 'function') {
+                    board.config({ 
+                        draggable: false, // Disable dragging
+                        orientation: 'white' // Reset to white orientation
+                    });
+                }
                 currentPuzzle = null;
                 
                 // Reset coordinate labels to default
