@@ -69,7 +69,7 @@ game_state = {
 }
 
 # Cache busting version - change this to force cache refresh
-APP_VERSION = '1.32.0'  # Force version for testing mobile touch detection with fixed function
+APP_VERSION = '1.35.0'  # Force version for mobile functionality improvements
 
 # Initialize leaderboard with environment-specific filename
 # Use different leaderboard files for local development vs production

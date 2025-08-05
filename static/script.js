@@ -226,20 +226,7 @@ function setupEventListeners() {
         }
     });
     
-    // Add debug button for testing
-    if (typeof $ !== 'undefined') {
-        $('<button id="debug-btn" class="btn btn-secondary" style="margin-left: 10px;">Debug Board</button>').insertAfter('#reset-game-btn');
-        $('#debug-btn').click(function() {
-            console.log('=== DEBUG BOARD STATE ===');
-            console.log('Current puzzle:', currentPuzzle);
-            console.log('Selected piece:', selectedPiece);
-            console.log('Selected square:', selectedSquare);
-            console.log('Game state:', game ? game.fen() : 'No game');
-            console.log('Board position:', board ? board.position() : 'No board');
-            console.log('Is mobile device:', 'ontouchstart' in window);
-            console.log('========================');
-        });
-    }
+
     
     $('#reset-game-btn').click(function() {
         resetGame();
@@ -454,8 +441,6 @@ function loadNewPuzzle() {
 
 // Setup custom click handlers for board squares
 function setupCustomClickHandlers() {
-    console.log('Setting up custom click handlers...');
-    
     // Click detection is handled through Chessboard2 callbacks:
     // - onDrop for piece clicks (source === target)
     // - onMouseupSquare for empty square clicks when piece is selected
@@ -463,38 +448,34 @@ function setupCustomClickHandlers() {
     // Add mobile touch event handling
     const chessboardElement = document.getElementById('chessboard');
     if (chessboardElement) {
-        console.log('Chessboard element found, setting up touch handlers');
-        
         // Variables to track touch state
         let touchStartTime = 0;
         let touchStartSquare = null;
         let touchStartPiece = null;
         let touchMoved = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
         
         // Handle touch start
         chessboardElement.addEventListener('touchstart', function(e) {
-            console.log('Touch start event triggered');
             e.preventDefault(); // Prevent default touch behavior
             
             const touch = e.touches[0];
-            console.log('Touch coordinates:', touch.clientX, touch.clientY);
             
             // Try to find the actual square element more accurately
             const squareElement = findSquareElementAtCoordinates(touch.clientX, touch.clientY);
-            console.log('Square element found:', squareElement);
             
             if (squareElement) {
                 const square = getSquareFromElement(squareElement);
                 const piece = getPieceFromElement(squareElement);
-                
-                console.log('Square:', square, 'Piece:', piece);
                 
                 if (square) {
                     touchStartTime = Date.now();
                     touchStartSquare = square;
                     touchStartPiece = piece;
                     touchMoved = false;
-                    console.log('Touch start on square:', square, 'piece:', piece);
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
                 }
             }
         }, { passive: false });
@@ -502,46 +483,43 @@ function setupCustomClickHandlers() {
         // Handle touch move to detect if user is dragging
         chessboardElement.addEventListener('touchmove', function(e) {
             if (touchStartTime > 0) {
-                touchMoved = true;
-                console.log('Touch moved - treating as drag');
+                const touch = e.touches[0];
+                const deltaX = Math.abs(touch.clientX - touchStartX);
+                const deltaY = Math.abs(touch.clientY - touchStartY);
+                const totalDelta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                // Only treat as drag if movement exceeds threshold (15 pixels)
+                if (totalDelta > 15) {
+                    touchMoved = true;
+                }
             }
         }, { passive: false });
         
         // Handle touch end
         chessboardElement.addEventListener('touchend', function(e) {
-            console.log('Touch end event triggered');
             e.preventDefault();
             
             if (touchStartTime > 0 && !touchMoved) {
                 const touch = e.changedTouches[0];
-                console.log('Touch end coordinates:', touch.clientX, touch.clientY);
                 
                 // Try to find the actual square element more accurately
                 const squareElement = findSquareElementAtCoordinates(touch.clientX, touch.clientY);
-                console.log('Square element at touch end:', squareElement);
                 
                 if (squareElement) {
                     const square = getSquareFromElement(squareElement);
                     const piece = getPieceFromElement(squareElement);
                     
-                    console.log('Touch end - Square:', square, 'Piece:', piece);
-                    
-                    if (square && touchStartSquare) {
+                    if (square) {
                         const touchDuration = Date.now() - touchStartTime;
-                        console.log('Touch duration:', touchDuration, 'ms');
                         
                         // Only handle as click if touch duration is short (not a drag)
-                        if (touchDuration < 300) {
-                            console.log('Touch end - handling as click on square:', square, 'piece:', piece);
+                        if (touchDuration < 500) { // Increased threshold for mobile
                             // Handle the touch as a click
                             handleCustomClick(square, piece);
-                        } else {
-                            console.log('Touch duration too long, ignoring');
                         }
                     }
                 } else {
                     // Fallback: try to use the board's position to determine the square
-                    console.log('No square element found, trying fallback approach');
                     const boardRect = chessboardElement.getBoundingClientRect();
                     const x = touch.clientX - boardRect.left;
                     const y = touch.clientY - boardRect.top;
@@ -556,7 +534,6 @@ function setupCustomClickHandlers() {
                         const position = board.position();
                         const piece = position[square] || null;
                         
-                        console.log('Fallback - calculated square:', square, 'piece:', piece);
                         handleCustomClick(square, piece);
                     }
                 }
@@ -567,25 +544,23 @@ function setupCustomClickHandlers() {
             touchStartSquare = null;
             touchStartPiece = null;
             touchMoved = false;
+            touchStartX = 0;
+            touchStartY = 0;
+            clickStartTime = 0; // Reset click timing
         }, { passive: false });
         
         // Add click event listener as fallback for mobile devices
         chessboardElement.addEventListener('click', function(e) {
-            console.log('Click event triggered on chessboard');
             // Only handle if this is a mobile device and touch events might not work
             if ('ontouchstart' in window) {
-                console.log('Mobile device detected, using click fallback');
                 const element = e.target;
-                console.log('Click target element:', element);
                 
                 const squareElement = findSquareElement(element);
-                console.log('Square element from click:', squareElement);
                 
                 if (squareElement) {
                     const square = getSquareFromElement(squareElement);
                     const piece = getPieceFromElement(squareElement);
                     
-                    console.log('Click fallback on square:', square, 'piece:', piece);
                     if (square) {
                         handleCustomClick(square, piece);
                     }
@@ -595,52 +570,41 @@ function setupCustomClickHandlers() {
         
         // Also add mousedown/mouseup events as additional fallback
         chessboardElement.addEventListener('mousedown', function(e) {
-            console.log('Mouse down event on chessboard');
             if ('ontouchstart' in window) {
                 const element = e.target;
                 const squareElement = findSquareElement(element);
                 if (squareElement) {
                     const square = getSquareFromElement(squareElement);
                     const piece = getPieceFromElement(squareElement);
-                    console.log('Mouse down on square:', square, 'piece:', piece);
                 }
             }
         });
         
         chessboardElement.addEventListener('mouseup', function(e) {
-            console.log('Mouse up event on chessboard');
             if ('ontouchstart' in window) {
                 const element = e.target;
                 const squareElement = findSquareElement(element);
                 if (squareElement) {
                     const square = getSquareFromElement(squareElement);
                     const piece = getPieceFromElement(squareElement);
-                    console.log('Mouse up on square:', square, 'piece:', piece);
                     if (square) {
                         handleCustomClick(square, piece);
                     }
                 }
             }
         });
-    } else {
-        console.error('Chessboard element not found!');
     }
 }
 
 // Helper functions for mobile touch handling
 function findSquareElement(element) {
-    console.log('findSquareElement called with:', element);
-    
     // Traverse up the DOM to find a square element
     let current = element;
     let depth = 0;
     while (current && current !== document.body && depth < 10) {
-        console.log('Checking element at depth', depth, ':', current.tagName, 'classes:', current.className);
-        
         if (current.classList.contains('square-55d63') || 
             current.hasAttribute('data-square') ||
             current.classList.contains('square')) {
-            console.log('Found square element:', current);
             return current;
         }
         
@@ -649,67 +613,52 @@ function findSquareElement(element) {
         for (let className of classes) {
             // Look for square-XXXXX pattern (where XXXXX is any 4-6 characters)
             if (className.startsWith('square-') && (className.length >= 10 && className.length <= 12)) {
-                console.log('Found square element by class:', current);
                 return current;
             }
         }
         current = current.parentElement;
         depth++;
     }
-    console.log('No square element found');
     return null;
 }
 
 // New function to find square element at specific coordinates
 function findSquareElementAtCoordinates(x, y) {
-    console.log('Finding square element at coordinates:', x, y);
-    
     // Get all elements at the point
     const elements = document.elementsFromPoint(x, y);
-    console.log('All elements at point:', elements);
     
     // Look for square elements in the list
     for (let element of elements) {
-        console.log('Checking element:', element.tagName, 'classes:', element.className);
-        
         // Check if this is a chess square element
         if (element.classList.contains('square-55d63') || 
             element.hasAttribute('data-square') ||
             element.classList.contains('square')) {
-            console.log('Found square element:', element);
             return element;
         }
         
         // Also check for Chessboard2 specific square classes
         const classes = element.className.split(' ');
         for (let className of classes) {
-            console.log('Checking class:', className, 'length:', className.length);
             // Look for square-XXXXX pattern (where XXXXX is any 4-6 characters)
             if (className.startsWith('square-') && (className.length >= 10 && className.length <= 12)) {
-                console.log('Found square element by class:', element);
                 return element;
             }
         }
     }
     
-    console.log('No square element found at coordinates');
     return null;
 }
 
 function getSquareFromElement(element) {
-    console.log('getSquareFromElement called with:', element);
-    
     // Try to get square from data-square-coord attribute first (new Chessboard2 format)
     if (element.hasAttribute('data-square-coord')) {
         const square = element.getAttribute('data-square-coord');
-        console.log('Found square from data-square-coord:', square);
         return square;
     }
     
     // Try to get square from data-square attribute (old format)
     if (element.hasAttribute('data-square')) {
         const square = element.getAttribute('data-square');
-        console.log('Found square from data-square:', square);
         return square;
     }
     
@@ -718,7 +667,6 @@ function getSquareFromElement(element) {
     for (let className of classes) {
         if (className.startsWith('square-') && className.length === 9) {
             const square = className.substring(7, 9); // Extract square from "square-55d63"
-            console.log('Found square from class name:', square);
             return square;
         }
     }
@@ -728,43 +676,35 @@ function getSquareFromElement(element) {
     while (parent && parent !== document.body) {
         if (parent.hasAttribute('data-square-coord')) {
             const square = parent.getAttribute('data-square-coord');
-            console.log('Found square from parent data-square-coord:', square);
             return square;
         }
         if (parent.hasAttribute('data-square')) {
             const square = parent.getAttribute('data-square');
-            console.log('Found square from parent data-square:', square);
             return square;
         }
         const parentClasses = parent.className.split(' ');
         for (let className of parentClasses) {
             if (className.startsWith('square-') && className.length === 9) {
                 const square = className.substring(7, 9);
-                console.log('Found square from parent class name:', square);
                 return square;
             }
         }
         parent = parent.parentElement;
     }
     
-    console.log('No square found in element');
     return null;
 }
 
 function getPieceFromElement(element) {
-    console.log('getPieceFromElement called with:', element);
-    
     // Check if there's a piece image in this element
     const pieceImg = element.querySelector('img');
     if (pieceImg) {
         // Extract piece info from the image src or alt attribute
         const src = pieceImg.src;
-        console.log('Found piece image with src:', src);
         if (src.includes('wikipedia')) {
             // Extract piece type from filename (e.g., "wK.png" -> "wK")
             const filename = src.split('/').pop();
             const piece = filename.replace('.png', '');
-            console.log('Extracted piece from filename:', piece);
             return piece;
         }
     }
@@ -775,11 +715,9 @@ function getPieceFromElement(element) {
         const pieceImg = parent.querySelector('img');
         if (pieceImg) {
             const src = pieceImg.src;
-            console.log('Found piece image in parent with src:', src);
             if (src.includes('wikipedia')) {
                 const filename = src.split('/').pop();
                 const piece = filename.replace('.png', '');
-                console.log('Extracted piece from parent filename:', piece);
                 return piece;
             }
         }
@@ -791,11 +729,9 @@ function getPieceFromElement(element) {
     if (square && board && board.position) {
         const position = board.position();
         const piece = position[square] || null;
-        console.log('Got piece from board position for square', square, ':', piece);
         return piece;
     }
     
-    console.log('No piece found in element');
     return null;
 }
 
@@ -803,7 +739,6 @@ function getPieceFromElement(element) {
 function handleCustomClick(square, piece) {
     // Validate square parameter
     if (!square || typeof square !== 'string' || square.length !== 2) {
-        console.log('Invalid square:', square);
         return;
     }
     
@@ -812,7 +747,11 @@ function handleCustomClick(square, piece) {
         return;
     }
     
-    console.log('handleCustomClick called with square:', square, 'piece:', piece);
+    // Track click timing for mobile detection
+    const currentTime = Date.now();
+    if (!clickStartTime) {
+        clickStartTime = currentTime;
+    }
     
     // If no piece is selected, try to select a piece
     if (!selectedPiece) {
@@ -821,29 +760,25 @@ function handleCustomClick(square, piece) {
             const pieceColor = piece.charAt(0);
             const expectedColor = currentPuzzle.playerColor === 'white' ? 'w' : 'b';
             
-            console.log('Piece color:', pieceColor, 'Expected color:', expectedColor);
-            
             if (pieceColor === expectedColor) {
                 // Select this piece
                 selectedPiece = piece;
                 selectedSquare = square;
                 highlightSquare(square, true); // Use selected piece highlighting
-                console.log('Piece selected:', piece, 'on square:', square);
-            } else {
-                console.log('Invalid piece color for current player');
             }
-        } else {
-            console.log('No piece on square:', square);
         }
     } else {
         // A piece is already selected, try to move it
         if (square === selectedSquare) {
-            // Clicked the same square, deselect
-            console.log('Deselecting piece on same square');
-            deselectPiece();
+            // Clicked the same square - on mobile, this might be accidental
+            // Only deselect if it's a deliberate action (not on mobile touch)
+            const isMobileTouch = 'ontouchstart' in window && (Date.now() - clickStartTime) < 100;
+            
+            if (!isMobileTouch) {
+                deselectPiece();
+            }
         } else {
             // Try to move the selected piece to the new square
-            console.log('Attempting move from', selectedSquare, 'to', square);
             
             // Use the same logic as onDrop - create a fake drop data object
             const dropData = {
@@ -920,7 +855,6 @@ function onMouseoutSquare(square, piece) {
 function onMouseupSquare(square, piece) {
     // Handle clicks on empty squares when a piece is selected
     if (!currentPuzzle || puzzleFailed) {
-        console.log('onMouseupSquare: No current puzzle or puzzle failed');
         return;
     }
     
@@ -934,28 +868,19 @@ function onMouseupSquare(square, piece) {
         actualPiece = square.piece;
     }
     
-    console.log('onMouseupSquare called with square:', actualSquare, 'piece:', actualPiece);
-    console.log('Current selected piece:', selectedPiece, 'on square:', selectedSquare);
-    
     // Handle all cases for mobile compatibility
     if (selectedPiece && selectedSquare) {
         // We have a piece selected
         if (actualSquare === selectedSquare) {
             // Clicked the same square, deselect
-            console.log('Clicked same square, deselecting');
             deselectPiece();
         } else if (actualSquare) {
             // Clicked a different square, try to move
-            console.log('Attempting move from', selectedSquare, 'to', actualSquare);
             handleCustomClick(actualSquare, actualPiece);
         }
     } else if (actualPiece) {
         // No piece selected, but clicked on a piece - select it
-        console.log('No piece selected, selecting piece on', actualSquare);
         handleCustomClick(actualSquare, actualPiece);
-    } else if (actualSquare) {
-        // No piece selected, clicked on empty square - do nothing
-        console.log('Clicked on empty square', actualSquare, 'with no piece selected');
     }
 }
 
@@ -965,15 +890,11 @@ function onDrop(data) {
     // Reset dragging state
     isDragging = false;
     
-    console.log('onDrop called with source:', data.source, 'target:', data.target);
-    
     // Handle clicks (same square) and drags (different squares)
     if (data.source === data.target) {
         // Get the piece information
         const position = board.position();
         const piece = position[data.source] || null;
-        
-        console.log('Same square click detected, piece:', piece);
         
         // Handle as a click for piece selection
         handleCustomClick(data.source, piece);
