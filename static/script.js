@@ -411,10 +411,8 @@ function loadNewPuzzle() {
                 
                 // Clear any hint highlighting
                 clearHintHighlight();
-                // Only clear feedback messages that are older than 1 second to avoid interrupting new messages
-                setTimeout(function() {
-                    $('#feedback-message').removeClass('show');
-                }, 1000);
+                // Clear feedback messages immediately when loading new puzzle
+                $('#feedback-message').removeClass('show');
                 
                 // Clear any piece selection for new puzzle
                 deselectPiece();
@@ -968,7 +966,7 @@ function makeMove(moveUCI) {
                     // Puzzle solved! Get enhanced celebration message
                     const consecutiveWins = response.consecutive_wins || 0;
                     const celebrationMessage = getRandomMessage('success', consecutiveWins);
-                    showFeedback(celebrationMessage, 'success', false, consecutiveWins);
+                    showFeedback(celebrationMessage, 'success', true, consecutiveWins);
                     updateStats();
                     
                     // Update current streak (don't check for high score yet)
