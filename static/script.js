@@ -907,6 +907,9 @@ function onDrop(data) {
     });
     
     if (move === null) {
+        // Show invalid move message
+        showFeedback('Invalid move', 'error');
+        
         // Reset the game state to the current puzzle position
         if (currentPuzzle) {
             try {

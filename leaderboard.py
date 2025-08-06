@@ -2,6 +2,7 @@
 """
 Leaderboard system for chess puzzle game.
 Handles high scores for Easy and Hard modes separately.
+Supports both local file storage and GitHub API storage.
 """
 
 import json
@@ -9,6 +10,8 @@ import os
 import tempfile
 import shutil
 import platform
+import base64
+import requests
 from datetime import datetime
 from typing import List, Dict, Optional
 
@@ -37,9 +40,23 @@ class Leaderboard:
     def __init__(self, filename: str = 'leaderboard.json'):
         self.filename = filename
         self.leaderboard = self._load_leaderboard()
+        self.github_token = os.environ.get('GITHUB_TOKEN')
+        self.github_repo = os.environ.get('GITHUB_REPO', 'jakereiser/chess-puzzle')
+        self.use_github = bool(self.github_token and self.github_repo)
     
     def _load_leaderboard(self) -> Dict:
-        """Load leaderboard from file or create default structure."""
+        """Load leaderboard from file or GitHub, or create default structure."""
+        # Try to load from GitHub first if configured
+        if self.use_github:
+            try:
+                github_data = self._load_from_github()
+                if github_data:
+                    print("Loaded leaderboard from GitHub")
+                    return github_data
+            except Exception as e:
+                print(f"Failed to load from GitHub: {e}")
+        
+        # Fallback to local file
         if os.path.exists(self.filename):
             try:
                 # Use file locking to prevent concurrent reads during writes
@@ -75,8 +92,93 @@ class Leaderboard:
             'hikaru': []
         }
     
+    def _load_from_github(self) -> Optional[Dict]:
+        """Load leaderboard data from GitHub repository."""
+        try:
+            headers = {
+                'Authorization': f'token {self.github_token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            # Get the current content of the file
+            url = f'https://api.github.com/repos/{self.github_repo}/contents/{self.filename}'
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                content = response.json()
+                # Decode the content
+                file_content = base64.b64decode(content['content']).decode('utf-8')
+                return json.loads(file_content)
+            elif response.status_code == 404:
+                # File doesn't exist on GitHub, return None to use default
+                return None
+            else:
+                print(f"GitHub API error: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"Error loading from GitHub: {e}")
+            return None
+    
+    def _save_to_github(self) -> bool:
+        """Save leaderboard data to GitHub repository."""
+        try:
+            headers = {
+                'Authorization': f'token {self.github_token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            # Get the current file to get the SHA
+            url = f'https://api.github.com/repos/{self.github_repo}/contents/{self.filename}'
+            response = requests.get(url, headers=headers)
+            
+            sha = None
+            if response.status_code == 200:
+                sha = response.json()['sha']
+            
+            # Prepare the content
+            content = json.dumps(self.leaderboard, indent=2)
+            encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+            
+            # Create the commit
+            data = {
+                'message': f'Update leaderboard - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}',
+                'content': encoded_content,
+                'branch': 'master'
+            }
+            
+            if sha:
+                data['sha'] = sha
+            
+            response = requests.put(url, headers=headers, json=data)
+            
+            if response.status_code in [200, 201]:
+                print("Successfully saved leaderboard to GitHub")
+                return True
+            else:
+                print(f"Failed to save to GitHub: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"Error saving to GitHub: {e}")
+            return False
+    
     def _save_leaderboard(self):
-        """Save leaderboard to file using atomic write operation."""
+        """Save leaderboard to file and/or GitHub using atomic write operation."""
+        # Try to save to GitHub first if configured
+        if self.use_github:
+            if self._save_to_github():
+                # Also save locally as backup
+                self._save_to_local_file()
+                return
+            else:
+                print("GitHub save failed, falling back to local file")
+        
+        # Fallback to local file only
+        self._save_to_local_file()
+    
+    def _save_to_local_file(self):
+        """Save leaderboard to local file using atomic write operation."""
         try:
             # Create backup of existing file if it exists
             if os.path.exists(self.filename):
@@ -133,12 +235,12 @@ class Leaderboard:
                     json.dump(self.leaderboard, f, indent=2)
             except Exception as fallback_error:
                 print(f"Critical error: Could not save leaderboard: {fallback_error}")
-                # Last resort: try to save to a different filename
+                # Last resort: try to save to a different location
                 try:
                     emergency_filename = f"{self.filename}.emergency"
                     with open(emergency_filename, 'w') as f:
                         json.dump(self.leaderboard, f, indent=2)
-                    print(f"Saved emergency backup to {emergency_filename}")
+                    print(f"Emergency save to {emergency_filename}")
                 except Exception as emergency_error:
                     print(f"Emergency save also failed: {emergency_error}")
     
@@ -169,7 +271,7 @@ class Leaderboard:
             'timestamp': datetime.now().timestamp()
         }
         
-        # Reload leaderboard to get latest data from file
+        # Reload leaderboard to get latest data from file/GitHub
         self.leaderboard = self._load_leaderboard()
         
         # Add to appropriate leaderboard
@@ -182,7 +284,7 @@ class Leaderboard:
         # Keep only top 5 scores
         self.leaderboard[mode] = self.leaderboard[mode][:5]
         
-        # Save to file
+        # Save to file and/or GitHub
         self._save_leaderboard()
         
         # Check if this is a new high score
