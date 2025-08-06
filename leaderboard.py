@@ -39,10 +39,17 @@ except ImportError:
 class Leaderboard:
     def __init__(self, filename: str = 'leaderboard.json'):
         self.filename = filename
-        self.leaderboard = self._load_leaderboard()
         self.github_token = os.environ.get('GITHUB_TOKEN')
         self.github_repo = os.environ.get('GITHUB_REPO', 'jakereiser/chess-puzzle')
         self.use_github = bool(self.github_token and self.github_repo)
+        
+        # Debug logging
+        if self.use_github:
+            print(f"GitHub integration enabled for repo: {self.github_repo}")
+        else:
+            print(f"GitHub integration disabled. Token: {'Yes' if self.github_token else 'No'}, Repo: {self.github_repo}")
+        
+        self.leaderboard = self._load_leaderboard()
     
     def _load_leaderboard(self) -> Dict:
         """Load leaderboard from file or GitHub, or create default structure."""
@@ -130,11 +137,17 @@ class Leaderboard:
             
             # Get the current file to get the SHA
             url = f'https://api.github.com/repos/{self.github_repo}/contents/{self.filename}'
+            print(f"Checking existing file at: {url}")
             response = requests.get(url, headers=headers)
             
             sha = None
             if response.status_code == 200:
                 sha = response.json()['sha']
+                print(f"Found existing file with SHA: {sha[:8]}...")
+            elif response.status_code == 404:
+                print("File doesn't exist on GitHub, will create new file")
+            else:
+                print(f"Unexpected response when checking file: {response.status_code} - {response.text}")
             
             # Prepare the content
             content = json.dumps(self.leaderboard, indent=2)
@@ -150,6 +163,7 @@ class Leaderboard:
             if sha:
                 data['sha'] = sha
             
+            print(f"Attempting to save to GitHub with data size: {len(content)} characters")
             response = requests.put(url, headers=headers, json=data)
             
             if response.status_code in [200, 201]:
@@ -167,7 +181,9 @@ class Leaderboard:
         """Save leaderboard to file and/or GitHub using atomic write operation."""
         # Try to save to GitHub first if configured
         if self.use_github:
+            print("Attempting to save to GitHub...")
             if self._save_to_github():
+                print("Successfully saved to GitHub, also saving locally as backup")
                 # Also save locally as backup
                 self._save_to_local_file()
                 return
@@ -175,6 +191,7 @@ class Leaderboard:
                 print("GitHub save failed, falling back to local file")
         
         # Fallback to local file only
+        print("Saving to local file only")
         self._save_to_local_file()
     
     def _save_to_local_file(self):
