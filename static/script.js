@@ -1027,7 +1027,7 @@ function makeMove(moveUCI) {
                 
                 // Show solution modal if solution data is provided
                 if (response.solution_moves && response.description) {
-                    showSolutionModal(response.solution_moves, response.description);
+                    showSolutionModal(response.solution_moves, response.description, currentPuzzle.playerColor);
                 }
                 
                 // Reset the board to the original puzzle position
@@ -1170,17 +1170,11 @@ function resetGame() {
                 currentStreak = 0; // Reset current streak
                 puzzleFailed = false; // Reset puzzle failed state
                 
-                // Maintain current mode selection (don't reset to 'easy')
+                // After reset, allow switching to any mode
                 $('.btn-mode').removeClass('btn-mode-active btn-mode-disabled');
                 $(`#${currentMode}-mode-btn`).addClass('btn-mode-active');
                 
-                // Re-apply mode restrictions
-                if (currentMode === 'hard' || currentMode === 'hikaru') {
-                    $('#easy-mode-btn').addClass('btn-mode-disabled');
-                }
-                if (currentMode === 'hikaru') {
-                    $('#hard-mode-btn').addClass('btn-mode-disabled');
-                }
+                // Don't re-apply mode restrictions after reset - allow free mode switching
                 
                 updateHintButtonState();
                 
@@ -1675,16 +1669,22 @@ function getOrdinalSuffix(num) {
 }
 
 // Solution Modal Functions
-function showSolutionModal(solutionMoves, description) {
+function showSolutionModal(solutionMoves, description, playerColor) {
     // Set the description
     $('#solution-description').text(description);
     
     // Clear previous moves
     $('#solution-moves-list').empty();
     
-    // Add each move to the list
+    // Add each move to the list with color coding
     solutionMoves.forEach((move, index) => {
-        const moveElement = $(`<div class="solution-move">${index + 1}. ${move.toUpperCase()}</div>`);
+        // Determine if this is a player move or opponent move
+        // Player moves are at even indices (0, 2, 4, ...) for white, odd indices (1, 3, 5, ...) for black
+        const isPlayerMove = (playerColor === 'white' && index % 2 === 0) || 
+                           (playerColor === 'black' && index % 2 === 1);
+        
+        const moveClass = isPlayerMove ? 'solution-move-player' : 'solution-move-opponent';
+        const moveElement = $(`<div class="solution-move ${moveClass}">${index + 1}. ${move.toUpperCase()}</div>`);
         $('#solution-moves-list').append(moveElement);
     });
     

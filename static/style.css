@@ -352,6 +352,29 @@ header h1 {
     transform: translateY(-1px);
 }
 
+/* Color-coded solution moves */
+.solution-move-player {
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    color: #000000;
+    border: 1px solid #dee2e6;
+}
+
+.solution-move-player:hover {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    transform: translateY(-1px);
+}
+
+.solution-move-opponent {
+    background: linear-gradient(135deg, #000000, #212529);
+    color: #ffffff;
+    border: 1px solid #495057;
+}
+
+.solution-move-opponent:hover {
+    background: linear-gradient(135deg, #212529, #343a40);
+    transform: translateY(-1px);
+}
+
 /* Confirmation Modal */
 .confirmation-modal {
     display: none;
