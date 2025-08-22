@@ -3,7 +3,7 @@
 A fun and interactive web-based chess puzzle game that challenges players with randomly generated puzzles. Live on https://chesspuzzle.io/.
 
 ## Features
-- **Massive Puzzle Database** - 10,000+ high-quality puzzles from Lichess
+- **Massive Puzzle Database** - 5,000+ high-quality puzzles from Lichess
 - **Interactive Chess Board** - Modern chessboard2 library with dual input methods
 - **Dual Input Methods** - Click to select pieces or drag and drop for movement
 - **Instant Feedback** - Immediate rewards and punishments
