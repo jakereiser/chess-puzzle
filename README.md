@@ -1,6 +1,6 @@
 # Chess Puzzle Web Application
 
-A fun and interactive web-based chess puzzle game that challenges players with randomly generated puzzles.
+A fun and interactive web-based chess puzzle game that challenges players with randomly generated puzzles. Live on https://chesspuzzle.io/.
 
 ## Features
 - **Massive Puzzle Database** - 10,000+ high-quality puzzles from Lichess

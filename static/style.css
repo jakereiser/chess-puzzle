@@ -447,32 +447,14 @@ header h1 {
 .chess-board-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 30px;
-}
-
-.chess-board {
-    width: 500px;
-    height: 500px;
-    border-radius: 4px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    position: relative;
-    border: 1px solid #ccc;
-    background: #fff;
-}
-
-.chess-board-container {
-    display: flex;
-    justify-content: center;
+    align-items: center;
     margin-bottom: 30px;
     position: relative;
-    overflow: visible; /* Allow coordinate labels to be visible */
-    width: 500px;
-    height: 500px;
+    overflow: visible;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
-    background: #fff;
-    border-radius: 4px;
+    flex: 1;
 }
 
 .controls {
@@ -480,6 +462,10 @@ header h1 {
     justify-content: center;
     gap: 20px;
     margin-bottom: 20px;
+    width: 100%;
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .btn {
@@ -542,6 +528,7 @@ header h1 {
     justify-content: center;
     margin-bottom: 20px;
     width: 100%;
+    position: relative;
 }
 
 /* Mode selector styling */
@@ -553,7 +540,10 @@ header h1 {
     padding: 8px;
     min-width: 120px;
     margin-top: 20px;
-    margin-right: 10px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 10;
 }
 
 .mode-label {
@@ -602,6 +592,33 @@ header h1 {
 .btn-mode-disabled:hover {
     background: #222;
     border-color: #333;
+}
+
+.btn-share {
+    padding: 8px 16px;
+    border: 2px solid #4CAF50;
+    background: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    width: 100px;
+    margin-top: 15px;
+}
+
+.btn-share:hover:not(:disabled) {
+    background: #45a049;
+    border-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.btn-share:disabled {
+    background: #666;
+    border-color: #666;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* Hint highlighting */
@@ -798,15 +815,20 @@ header h1 {
 /* Coordinate labels */
 .coordinate-labels {
     position: relative;
-    display: inline-block;
-    padding: 0 20px 20px 20px; /* Remove top padding to eliminate white bar */
-    min-height: 500px; /* This will be overridden by JavaScript for responsive sizing */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px 20px 20px;
+    min-height: 500px;
+    width: 540px;
+    margin: 0 auto;
 }
 
 .coordinate-labels .chess-board {
     position: relative;
     width: 500px !important;
     height: 500px !important;
+    margin: 0 auto;
 }
 
 /* Left side coordinates (1-8) */
@@ -858,12 +880,32 @@ header h1 {
     font-family: 'Inter', sans-serif;
 }
 
-/* Ensure chessboard has proper dimensions */
+/* Ensure chessboard has proper dimensions and centering */
 #chessboard {
-    width: 500px;
-    height: 500px;
+    width: 500px !important;
+    height: 500px !important;
     min-width: 250px;
     min-height: 250px;
+    margin: 0 auto !important;
+    display: block !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+/* Force centering of chessboard2 wrapper elements */
+.chess-board-container > * {
+    margin: 0 auto !important;
+}
+
+/* Override any absolute positioning from chessboard2 */
+.chess-board-container .board-b72b1,
+.chess-board-container [class*="board-"],
+.chess-board-container [class*="chessboard"] {
+    margin: 0 auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    position: relative !important;
 }
 
 /* Global override for Chessboard2 notation spacing */
@@ -919,12 +961,12 @@ header h1 {
     /* Chess board mobile optimizations - Prevent over-stretching */
     .chess-board-container {
         width: 100% !important;
-        max-width: 280px !important; /* Further reduce for mobile */
+        max-width: 320px !important;
         margin: 0 auto !important;
         background: transparent !important;
-        box-shadow: none !important; /* Remove shadow on mobile for cleaner look */
-        height: auto !important; /* Override fixed height */
-        min-height: auto !important; /* Override fixed min-height */
+        box-shadow: none !important;
+        height: auto !important;
+        min-height: auto !important;
     }
     
     .chess-board {
@@ -944,8 +986,11 @@ header h1 {
     
     /* Coordinate labels for mobile */
     .coordinate-labels {
-        padding: 0 15px 18px 15px; /* Increase bottom padding for mobile to prevent overlap */
-        min-height: auto !important; /* Remove fixed min-height for mobile */
+        padding: 0 15px 18px 15px;
+        min-height: auto !important;
+        width: 100% !important;
+        max-width: 320px !important;
+        margin: 0 auto !important;
     }
     
     .coordinate-left {

@@ -64,6 +64,7 @@ else:
 # Global game state (in production, use a proper database)
 game_state = {
     'current_puzzle': None,
+    'current_puzzle_id': None,
     'consecutive_wins': 0,
     'total_puzzles_solved': 0
 }
@@ -174,6 +175,80 @@ def test():
     """Test page."""
     return render_template('test.html')
 
+@app.route('/googleb1e2d9419397e39d.html')
+def google_verification():
+    """Google Search Console verification file."""
+    return 'google-site-verification: googleb1e2d9419397e39d.html', 200, {'Content-Type': 'text/plain'}
+
+@app.route('/puzzle/<puzzle_id>')
+def shared_puzzle(puzzle_id):
+    """Serve a shared puzzle page."""
+    return render_template('index.html', version=APP_VERSION, shared_puzzle_id=puzzle_id)
+
+@app.route('/api/get-puzzle/<puzzle_id>')
+def get_specific_puzzle(puzzle_id):
+    """Get a specific puzzle by ID."""
+    try:
+        # Load puzzles from JSON file
+        import json
+        import hashlib
+        
+        try:
+            with open('puzzles_combined.json', 'r') as f:
+                puzzle_data = json.load(f)
+            
+            # Find puzzle by ID
+            target_puzzle = None
+            for puzzle in puzzle_data['puzzles']:
+                puzzle_content = f"{puzzle['fen']}{puzzle['solution']}{puzzle.get('rating', 0)}"
+                current_puzzle_id = hashlib.md5(puzzle_content.encode()).hexdigest()[:8]
+                if current_puzzle_id == puzzle_id:
+                    target_puzzle = puzzle
+                    break
+            
+            if not target_puzzle:
+                return jsonify({'success': False, 'error': 'Puzzle not found'}), 404
+            
+            initial_fen = target_puzzle['fen']
+            solution_moves = target_puzzle['solution']
+            original_description = target_puzzle['description']
+            player_color = target_puzzle['player_color']
+            
+            # Generate better description
+            description = generate_puzzle_description(original_description, player_color, target_puzzle)
+            
+            # Add puzzle rating to description if available
+            if 'rating' in target_puzzle:
+                rating = target_puzzle['rating']
+                rounded_rating = round(rating / 50) * 50
+                description = f"{description} (Rated {rounded_rating})"
+            
+            chess_puzzle = ChessPuzzle(initial_fen, solution_moves, description)
+            game_state['current_puzzle'] = chess_puzzle
+            game_state['current_puzzle_id'] = puzzle_id
+            game_state['player_color'] = player_color
+            
+            # Count moves for the player's color
+            if player_color == "white":
+                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
+            else:
+                player_moves_count = len([move for i, move in enumerate(solution_moves) if i % 2 == 0])
+            
+            return jsonify({
+                'success': True,
+                'fen': initial_fen,
+                'description': description,
+                'moves_required': player_moves_count,
+                'player_color': player_color,
+                'puzzle_id': puzzle_id
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': 'Puzzle not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 
 @app.route('/api/new-puzzle', methods=['POST'])
@@ -220,6 +295,11 @@ def new_puzzle():
             # Randomly select a puzzle from filtered list
             puzzle = random.choice(filtered_puzzles)
             
+            # Generate a unique puzzle ID based on content hash
+            import hashlib
+            puzzle_content = f"{puzzle['fen']}{puzzle['solution']}{puzzle.get('rating', 0)}"
+            puzzle_id = hashlib.md5(puzzle_content.encode()).hexdigest()[:8]
+            
             initial_fen = puzzle['fen']
             solution_moves = puzzle['solution']
             original_description = puzzle['description']
@@ -240,6 +320,7 @@ def new_puzzle():
             
             chess_puzzle = ChessPuzzle(initial_fen, solution_moves, description)
             game_state['current_puzzle'] = chess_puzzle
+            game_state['current_puzzle_id'] = puzzle_id
             game_state['player_color'] = player_color
             
             # Count moves for the player's color
@@ -255,7 +336,8 @@ def new_puzzle():
                 'fen': initial_fen,
                 'description': description,
                 'moves_required': player_moves_count,
-                'player_color': player_color
+                'player_color': player_color,
+                'puzzle_id': puzzle_id
             })
             
         except Exception as e:
@@ -273,8 +355,13 @@ def new_puzzle():
                 description = "Black to move and fork"
                 player_color = "black"
             
+            # Generate fallback puzzle ID
+            fallback_puzzle_content = f"{initial_fen}{solution_moves}"
+            fallback_puzzle_id = hashlib.md5(fallback_puzzle_content.encode()).hexdigest()[:8]
+            
             chess_puzzle = ChessPuzzle(initial_fen, solution_moves, description)
             game_state['current_puzzle'] = chess_puzzle
+            game_state['current_puzzle_id'] = fallback_puzzle_id
             game_state['player_color'] = player_color
             
             # Count moves for the player's color
@@ -288,7 +375,8 @@ def new_puzzle():
                 'fen': initial_fen,
                 'description': description,
                 'moves_required': player_moves_count,
-                'player_color': player_color
+                'player_color': player_color,
+                'puzzle_id': fallback_puzzle_id
             })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

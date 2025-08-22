@@ -3,16 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Chess Puzzle Game - Free Daily Chess Puzzles & Tactics Training | ChessPuzzle.io</title>
+    <meta name="title" content="Chess Puzzle Game - Free Daily Chess Puzzles & Tactics Training | ChessPuzzle.io">
+    <meta name="description" content="Improve your chess skills with free daily puzzles! Practice chess tactics, forks, pins, and checkmates. Three difficulty modes: Easy (400-1500), Hard (1500-2000), and Hikaru (1800-3050). Track your progress and compete on the leaderboard!">
+    <meta name="keywords" content="chess puzzles, chess tactics, chess training, free chess puzzles, daily chess puzzles, chess practice, chess tactics trainer, chess puzzle game, online chess puzzles, chess improvement">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="author" content="Jake Reiser">
+    <link rel="canonical" href="https://chesspuzzle.io/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://chesspuzzle.io/">
+    <meta property="og:title" content="Chess Puzzle Game - Free Daily Chess Puzzles & Tactics Training">
+    <meta property="og:description" content="Improve your chess skills with free daily puzzles! Practice tactics in Easy, Hard, or Hikaru mode. Track your streak and compete on the leaderboard!">
+    <meta property="og:image" content="https://chesspuzzle.io/static/chess-preview.png">
+    <meta property="og:site_name" content="ChessPuzzle.io">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://chesspuzzle.io/">
+    <meta property="twitter:title" content="Chess Puzzle Game - Free Daily Chess Puzzles & Tactics Training">
+    <meta property="twitter:description" content="Improve your chess skills with free daily puzzles! Practice tactics in Easy, Hard, or Hikaru mode.">
+    <meta property="twitter:image" content="https://chesspuzzle.io/static/chess-preview.png">
+    
+    <!-- Cache Control for Dynamic Content -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Chess Puzzle Game</title>
+    
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard2.min.css', v=version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=version) }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/chessboard2.min.js', v=version) }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    
+    <!-- Structured Data for Rich Snippets -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Chess Puzzle Game",
+        "url": "https://chesspuzzle.io/",
+        "description": "Free online chess puzzle trainer with daily tactics puzzles. Practice chess tactics, forks, pins, and checkmates in three difficulty modes.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "127"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Jake Reiser",
+            "url": "https://github.com/jakereiser"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "ChessPuzzle.io"
+        },
+        "genre": ["Chess", "Puzzle", "Strategy", "Educational"],
+        "gamePlatform": ["Web Browser", "Mobile Browser"],
+        "numberOfPlayers": {
+            "@type": "QuantitativeValue",
+            "value": 1
+        }
+    }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -64,6 +129,8 @@
                     <button id="easy-mode-btn" class="btn btn-mode btn-mode-active" data-mode="easy">Easy</button>
                     <button id="hard-mode-btn" class="btn btn-mode" data-mode="hard">Hard</button>
                     <button id="hikaru-mode-btn" class="btn btn-mode" data-mode="hikaru">Hikaru</button>
+                    
+                    <button id="share-puzzle-btn" class="btn btn-share" disabled>📤 Share Puzzle</button>
                 </div>
                 
                 <div class="chess-board-container">

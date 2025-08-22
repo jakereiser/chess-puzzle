@@ -3,7 +3,9 @@
 let board = null;
 let game = null;
 let currentPuzzle = null;
+let currentPuzzleId = null;
 let currentMode = 'easy'; // 'easy', 'hard', or 'hikaru'
+let isSharedPuzzle = false; // Track if we're playing a shared puzzle
 let hintUsedTotal = false; // Track if hint was used in hard mode (one total)
 let hintCount = 0; // Track hint count for hard mode (max 3)
 let currentStreak = 0; // Track current streak for leaderboard
@@ -54,6 +56,10 @@ $(document).ready(function() {
         loadGameStats();
         loadLeaderboard();
         setupEventListeners();
+        
+        // Check if we're loading a shared puzzle
+        // If not loading a shared puzzle, the board will show the start position
+        checkForSharedPuzzle();
         
         // Handle window resize to keep board contained
         $(window).resize(function() {
@@ -249,6 +255,11 @@ function setupEventListeners() {
         setMode('hikaru');
     });
     
+    // Share puzzle button
+    $('#share-puzzle-btn').click(function() {
+        sharePuzzle();
+    });
+    
     // Leaderboard tab buttons
     $('.leaderboard-tab').click(function() {
         const mode = $(this).data('mode');
@@ -293,7 +304,14 @@ function setupEventListeners() {
     // Solution modal event listeners
     $('#new-puzzle-after-solution-btn').click(function() {
         hideSolutionModal();
-        loadNewPuzzle();
+        
+        if (isSharedPuzzle && $(this).text() === 'Try Again') {
+            // Reset shared puzzle to try again
+            retrySharedPuzzle();
+        } else {
+            // Load new puzzle (regular behavior)
+            loadNewPuzzle();
+        }
     });
     
     $('#close-solution-btn').click(function() {
@@ -350,6 +368,14 @@ function loadNewPuzzle() {
                     movesRequired: response.moves_required,
                     playerColor: response.player_color || 'white'
                 };
+                
+                // Store puzzle ID and enable share button
+                currentPuzzleId = response.puzzle_id;
+                isSharedPuzzle = false; // This is a new random puzzle
+                $('#share-puzzle-btn').prop('disabled', false);
+                
+                // Reset puzzle failure state
+                puzzleFailed = false;
                 
                 // Update the board position to the scrambled puzzle
                 game = new Chess(response.fen);
@@ -966,22 +992,33 @@ function makeMove(moveUCI) {
         success: function(response) {
             if (response.success) {
                 if (response.puzzle_complete) {
-                    // Puzzle solved! Get enhanced celebration message
-                    const consecutiveWins = response.consecutive_wins || 0;
-                    const celebrationMessage = getRandomMessage('success', consecutiveWins);
-                    showFeedback(celebrationMessage, 'success', true, consecutiveWins);
-                    updateStats();
-                    
-                    // Update current streak (don't check for high score yet)
-                    currentStreak = consecutiveWins;
-                    
-                    // Update moves required to 0 when puzzle is complete
-                    $('#moves-required').text(`Moves required: ${response.moves_required || 0}`);
-                    
-                    // Auto-load new puzzle after a delay
-                    setTimeout(function() {
-                        loadNewPuzzle();
-                    }, 2000);
+                    if (isSharedPuzzle) {
+                        // Shared puzzle completed - no streak increase
+                        showFeedback('🎉 Shared puzzle solved! Click "New Puzzle" to begin your own puzzles and wins counter!', 'success', true);
+                        $('#moves-required').text(`Puzzle completed! Click "New Puzzle" to begin!`);
+                        
+                        // Disable piece interaction until new puzzle is loaded
+                        puzzleFailed = true; // This prevents moves in makeMove function
+                        
+                        // Don't auto-load new puzzle for shared puzzles
+                    } else {
+                        // Regular puzzle completed - normal behavior
+                        const consecutiveWins = response.consecutive_wins || 0;
+                        const celebrationMessage = getRandomMessage('success', consecutiveWins);
+                        showFeedback(celebrationMessage, 'success', true, consecutiveWins);
+                        updateStats();
+                        
+                        // Update current streak (don't check for high score yet)
+                        currentStreak = consecutiveWins;
+                        
+                        // Update moves required to 0 when puzzle is complete
+                        $('#moves-required').text(`Moves required: ${response.moves_required || 0}`);
+                        
+                        // Auto-load new puzzle after a delay
+                        setTimeout(function() {
+                            loadNewPuzzle();
+                        }, 2000);
+                    }
                 } else {
                     // Good move, continue
                     showFeedback('Good move! Keep going!', 'success');
@@ -1011,26 +1048,40 @@ function makeMove(moveUCI) {
                     }
                 }
             } else {
-                // Wrong move - streak is broken
-                puzzleFailed = true; // Mark puzzle as failed
-                const encouragementMessage = getRandomMessage('error');
-                showFeedback(encouragementMessage, 'error');
-                updateStats();
-                
-                // Check for high score when streak is broken
-                if (currentStreak > 0) {
-                    checkHighScore(currentMode, currentStreak);
-                }
-                
-                // Reset current streak
-                currentStreak = 0;
-                
-                // Clear any hint highlighting when a wrong move is made
-                clearHintHighlight();
-                
-                // Show solution modal if solution data is provided
-                if (response.solution_moves && response.description) {
-                    showSolutionModal(response.solution_moves, response.description, currentPuzzle.playerColor);
+                if (isSharedPuzzle) {
+                    // Shared puzzle failed - allow retry without breaking streak
+                    puzzleFailed = true; // Mark puzzle as failed
+                    showFeedback('❌ Wrong move! Try again or see solution.', 'error');
+                    
+                    // Clear any hint highlighting
+                    clearHintHighlight();
+                    
+                    // Show solution modal with "Try Again" option
+                    if (response.solution_moves && response.description) {
+                        showSolutionModal(response.solution_moves, response.description, currentPuzzle.playerColor, true); // true = isSharedPuzzle
+                    }
+                } else {
+                    // Regular puzzle failed - normal behavior (streak broken)
+                    puzzleFailed = true; // Mark puzzle as failed
+                    const encouragementMessage = getRandomMessage('error');
+                    showFeedback(encouragementMessage, 'error');
+                    updateStats();
+                    
+                    // Check for high score when streak is broken
+                    if (currentStreak > 0) {
+                        checkHighScore(currentMode, currentStreak);
+                    }
+                    
+                    // Reset current streak
+                    currentStreak = 0;
+                    
+                    // Clear any hint highlighting when a wrong move is made
+                    clearHintHighlight();
+                    
+                    // Show solution modal if solution data is provided
+                    if (response.solution_moves && response.description) {
+                        showSolutionModal(response.solution_moves, response.description, currentPuzzle.playerColor);
+                    }
                 }
                 
                 // Reset the board to the original puzzle position
@@ -1672,7 +1723,7 @@ function getOrdinalSuffix(num) {
 }
 
 // Solution Modal Functions
-function showSolutionModal(solutionMoves, description, playerColor) {
+function showSolutionModal(solutionMoves, description, playerColor, isShared = false) {
     // Set the description
     $('#solution-description').text(description);
     
@@ -1690,6 +1741,13 @@ function showSolutionModal(solutionMoves, description, playerColor) {
         const moveElement = $(`<div class="solution-move ${moveClass}">${index + 1}. ${move.toUpperCase()}</div>`);
         $('#solution-moves-list').append(moveElement);
     });
+    
+    // Change button text based on puzzle type
+    if (isShared) {
+        $('#new-puzzle-after-solution-btn').text('Try Again');
+    } else {
+        $('#new-puzzle-after-solution-btn').text('New Puzzle');
+    }
     
     // Show the modal
     $('#solution-modal').addClass('show');
@@ -1722,4 +1780,174 @@ function convertUCIToSAN(uciMove) {
         return `${from}-${to}`;
     }
     return uciMove.toUpperCase();
+}
+
+// Share Puzzle Functions
+function sharePuzzle() {
+    if (!currentPuzzleId) {
+        showFeedback('No puzzle to share!', 'error');
+        return;
+    }
+    
+    const shareUrl = `${window.location.origin}/puzzle/${currentPuzzleId}`;
+    
+    // Try to use the modern Clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showFeedback('🔗 Puzzle link copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback to the older method
+            fallbackCopyToClipboard(shareUrl);
+        });
+    } else {
+        // Fallback for older browsers or non-secure contexts
+        fallbackCopyToClipboard(shareUrl);
+    }
+}
+
+function fallbackCopyToClipboard(text) {
+    // Create a temporary text area element
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    
+    // Make it invisible and add to DOM
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    
+    // Select and copy
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showFeedback('🔗 Puzzle link copied to clipboard!', 'success');
+    } catch (err) {
+        // If all else fails, show the URL for manual copying
+        showFeedback(`Copy this link: ${text}`, 'success');
+    }
+    
+    // Clean up
+    document.body.removeChild(textArea);
+}
+
+function checkForSharedPuzzle() {
+    // Check if we're on a shared puzzle URL (/puzzle/id)
+    const path = window.location.pathname;
+    const puzzleMatch = path.match(/^\/puzzle\/([a-f0-9]{8})$/);
+    
+    if (puzzleMatch) {
+        const puzzleId = puzzleMatch[1];
+        loadSharedPuzzle(puzzleId);
+        return true; // Indicate that we're loading a shared puzzle
+    }
+    return false; // No shared puzzle to load
+}
+
+function retrySharedPuzzle() {
+    if (!currentPuzzle) return;
+    
+    // Reset puzzle state
+    puzzleFailed = false;
+    
+    // Reset the board to the original puzzle position
+    if (currentPuzzle.fen) {
+        try {
+            game = new Chess(currentPuzzle.fen);
+            if (board && typeof board.setPosition === 'function') {
+                board.setPosition(currentPuzzle.fen);
+            }
+            
+            // Update UI
+            $('#moves-required').text(`Moves required: ${currentPuzzle.movesRequired}`);
+            showFeedback('🔄 Try again! You can do it!', 'success');
+        } catch (error) {
+            console.error('Error resetting shared puzzle:', error);
+            showFeedback('Error resetting puzzle. Please refresh the page.', 'error');
+        }
+    }
+}
+
+function loadSharedPuzzle(puzzleId) {
+    showFeedback('Loading shared puzzle...', 'success');
+    
+    $.ajax({
+        url: `/api/get-puzzle/${puzzleId}`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                currentPuzzle = {
+                    fen: response.fen,
+                    description: response.description,
+                    movesRequired: response.moves_required,
+                    playerColor: response.player_color || 'white'
+                };
+                
+                // Store puzzle ID and enable share button
+                currentPuzzleId = response.puzzle_id;
+                isSharedPuzzle = true; // This is a shared puzzle
+                $('#share-puzzle-btn').prop('disabled', false);
+                
+                // Update the board position
+                game = new Chess(response.fen);
+                
+                // Ensure board is ready before setting position
+                setTimeout(() => {
+                    if (board && typeof board.setPosition === 'function') {
+                        try {
+                            board.setPosition(response.fen);
+                        } catch (error) {
+                            console.warn('Error setting shared puzzle position:', error);
+                            // Retry after another delay
+                            setTimeout(() => {
+                                if (board && typeof board.setPosition === 'function') {
+                                    try {
+                                        board.setPosition(response.fen);
+                                    } catch (retryError) {
+                                        console.warn('Retry failed:', retryError);
+                                    }
+                                }
+                            }, 200);
+                        }
+                    }
+                }, 300);
+                
+                // Set board orientation based on player color (with delay to ensure board is ready)
+                setTimeout(() => {
+                    if (response.player_color === 'black') {
+                        if (board && typeof board.config === 'function') {
+                            board.config({ orientation: 'black' });
+                        }
+                        flipCoordinateLabels();
+                    } else {
+                        if (board && typeof board.config === 'function') {
+                            board.config({ orientation: 'white' });
+                        }
+                        resetCoordinateLabels();
+                    }
+                }, 400);
+                
+                // Update UI
+                $('#puzzle-description').text(response.description);
+                $('#moves-required').text(`Moves required: ${response.moves_required}`);
+                
+                // Clear any previous feedback
+                $('#feedback-message').removeClass('show');
+                
+                // Reset game state for shared puzzle
+                currentStreak = 0;
+                puzzleFailed = false;
+                hintCount = 0;
+                hintUsedTotal = false;
+                
+                showFeedback('Shared puzzle loaded! Good luck!', 'success');
+            } else {
+                showFeedback('Puzzle not found!', 'error');
+            }
+        },
+        error: function() {
+            showFeedback('Error loading shared puzzle!', 'error');
+        }
+    });
 } 
