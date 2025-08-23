@@ -353,6 +353,14 @@ function setupEventListeners() {
     }
 
 function loadNewPuzzle() {
+    // Track new puzzle loads
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'new_puzzle_loaded', {
+            event_category: 'puzzle',
+            event_label: currentMode
+        });
+    }
+    
     $.ajax({
         url: '/api/new-puzzle',
         method: 'POST',
@@ -1007,6 +1015,15 @@ function makeMove(moveUCI) {
                         const celebrationMessage = getRandomMessage('success', consecutiveWins);
                         showFeedback(celebrationMessage, 'success', true, consecutiveWins);
                         updateStats();
+                        
+                        // Track puzzle completion
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'puzzle_completed', {
+                                event_category: 'puzzle',
+                                event_label: currentMode,
+                                value: consecutiveWins
+                            });
+                        }
                         
                         // Update current streak (don't check for high score yet)
                         currentStreak = consecutiveWins;
@@ -1791,6 +1808,15 @@ function sharePuzzle() {
     
     const shareUrl = `${window.location.origin}/puzzle/${currentPuzzleId}`;
     
+    // Track puzzle shares
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'puzzle_shared', {
+            event_category: 'sharing',
+            event_label: currentMode,
+            puzzle_id: currentPuzzleId
+        });
+    }
+    
     // Try to use the modern Clipboard API first
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(shareUrl).then(() => {
@@ -1940,6 +1966,15 @@ function loadSharedPuzzle(puzzleId) {
                 puzzleFailed = false;
                 hintCount = 0;
                 hintUsedTotal = false;
+                
+                // Track shared puzzle loads
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'shared_puzzle_loaded', {
+                        event_category: 'sharing',
+                        event_label: 'incoming_share',
+                        puzzle_id: puzzleId
+                    });
+                }
                 
                 showFeedback('Shared puzzle loaded! Good luck!', 'success');
             } else {

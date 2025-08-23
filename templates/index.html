@@ -37,6 +37,19 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chessboard2.min.css', v=version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=version) }}">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1SW48464KC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'G-1SW48464KC', {
+        page_title: 'Chess Puzzle Game',
+        custom_map: {'custom_parameter_1': 'puzzle_difficulty'}
+      });
+    </script>
+    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/chessboard2.min.js', v=version) }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -218,6 +231,7 @@
     <footer class="footer">
         <div class="footer-content">
             <p>&copy; 2025 Chess Puzzle Challenge. Created by <a href="https://github.com/jakereiser" target="_blank" rel="noopener noreferrer">Jake Reiser</a></p>
+            <p style="font-size: 0.8rem; margin-top: 10px; opacity: 0.8;">This site uses Google Analytics to understand how visitors interact with the website.</p>
         </div>
     </footer>
 
